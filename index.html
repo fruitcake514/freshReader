@@ -746,9 +746,85 @@ function doLogout(){
 async function loadApp(){
   showScreen('app-screen');
   loadPersistedArticles();
-  loadStarredArticles(); // starred articles survive cache wipes
-  await Promise.all([loadCategories(),loadUnreadCounts()]);
-  await loadArticles();
+  loadStarredArticles();
+
+  const online = navigator.onLine;
+
+  if(!online){
+    // Offline — render from cache immediately, no API calls
+    showOfflineBanner(true);
+    renderFromCache();
+    return;
+  }
+
+  // Online — try to fetch live data, fall back to cache if it fails
+  try{
+    await Promise.all([loadCategories(), loadUnreadCounts()]);
+    await loadArticles();
+    showOfflineBanner(false);
+  } catch(e){
+    console.warn('loadApp network error, falling back to cache:', e);
+    showOfflineBanner(true);
+    renderFromCache();
+  }
+}
+
+function showOfflineBanner(show){
+  let banner = document.getElementById('offline-banner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'offline-banner';
+    banner.style.cssText = [
+      'position:sticky','top:calc(var(--safe-top) + var(--nav-h))','z-index:45',
+      'background:#92400e','color:#fef3c7',
+      'text-align:center','font-size:.78rem','font-weight:600',
+      'padding:6px 16px','display:none','align-items:center',
+      'justify-content:center','gap:8px'
+    ].join(';');
+    banner.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M12 20h.01"/></svg> Offline — showing cached articles`;
+    // Insert after the topbar inside app-screen
+    const appScreen = document.getElementById('app-screen');
+    const catBar = document.getElementById('cat-bar');
+    if(catBar) appScreen.insertBefore(banner, catBar);
+    else appScreen.insertBefore(banner, appScreen.firstChild);
+  }
+  banner.style.display = show ? 'flex' : 'none';
+}
+
+function renderFromCache(){
+  // Build article list from everything in cachedArticles, newest first
+  const items = Object.values(S.cachedArticles)
+    .sort((a,b) => (b.published||0) - (a.published||0));
+
+  if(!items.length){
+    document.getElementById('list-content').innerHTML =
+      `<div class="empty">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M12 20h.01"/>
+        </svg>
+        <p>You're offline and there are no cached articles yet.<br>Connect to load your feeds.</p>
+      </div>`;
+    return;
+  }
+
+  // Build a minimal category structure from cached feed origins
+  if(!S.cats.length){
+    const catMap = {};
+    items.forEach(a => {
+      const feedId = a.origin?.streamId || '__unknown__';
+      const feedTitle = a.origin?.title || 'Unknown feed';
+      if(!catMap['__cached__']) catMap['__cached__'] = { label:'Cached', feeds:[] };
+      if(!catMap['__cached__'].feeds.find(f => f.id === feedId)){
+        catMap['__cached__'].feeds.push({ id: feedId, title: feedTitle });
+      }
+    });
+    S.cats = Object.entries(catMap).map(([id,v]) => ({ id, ...v }));
+    window._catList = S.cats;
+    renderCatTabs();
+  }
+
+  S.articles = items;
+  renderArticleList();
 }
 
 async function loadCategories(){
@@ -1710,6 +1786,23 @@ function ytSkelHtml(n){ return Array(n).fill(0).map(()=>`<div class="yt-card ske
 // SERVICE WORKER
 // ═══════════════════════════════════════════════════════════
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+
+// Go online — hide banner and try to refresh live data
+window.addEventListener('online', async () => {
+  showOfflineBanner(false);
+  toast('Back online — refreshing…');
+  if(S.auth){
+    try{
+      await Promise.all([loadCategories(), loadUnreadCounts()]);
+      await loadArticles();
+    }catch(e){ showOfflineBanner(true); }
+  }
+});
+
+// Go offline — show banner
+window.addEventListener('offline', () => {
+  showOfflineBanner(true);
+});
 if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
 
 // ═══════════════════════════════════════════════════════════
@@ -1844,7 +1937,26 @@ loadCacheDays();
   const srv=localStorage.getItem('fr_server');
   const auth=localStorage.getItem('fr_auth');
   const user=localStorage.getItem('fr_user')||'';
-  if(srv&&auth){ S.server=srv; S.auth=auth; S.user=user; document.getElementById('srv').value=srv; try{ await loadApp(); }catch(e){ clearSession(); showScreen('login-screen'); } }
+  if(srv&&auth){
+    S.server=srv; S.auth=auth; S.user=user;
+    document.getElementById('srv').value=srv;
+    try{
+      await loadApp();
+    }catch(e){
+      // Only clear session on auth errors, not network failures
+      const msg=(e.message||'').toLowerCase();
+      const isAuthError = msg.includes('401') || msg.includes('403') ||
+                          msg.includes('invalid') || msg.includes('unauthorized');
+      if(isAuthError){ clearSession(); showScreen('login-screen'); }
+      else {
+        // Network down or server unreachable — show cached data instead
+        showScreen('app-screen');
+        loadPersistedArticles(); loadStarredArticles();
+        showOfflineBanner(true);
+        renderFromCache();
+      }
+    }
+  }
 })();
 </script>
 </body>
