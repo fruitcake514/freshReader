@@ -1171,7 +1171,7 @@ function launchYt(id, posterId){
   const ratio=poster.querySelector('.yt-player-ratio,.vid-ratio');
   if(!ratio) return;
   // playsinline=1 keeps video in-page with audio on iOS; fullscreen button still works inside player
-  ratio.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>`;
+  ratio.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
   poster.onclick=null;
 }
 
@@ -1330,7 +1330,7 @@ function buildSlideMedia(a, raw, idx){
     const src=source?.getAttribute('src')||video.getAttribute('src')||'';
     const poster=video.getAttribute('poster')||'';
     if(src) return `<video src="${esc(src)}" ${poster?`poster="${esc(poster)}"`:''}
-      playsinline preload="metadata" loop
+      playsinline preload="metadata"
       style="width:100%;height:100%;object-fit:contain;position:absolute;inset:0"></video>`;
   }
   // YouTube (iframe in content or URL)
@@ -1338,7 +1338,7 @@ function buildSlideMedia(a, raw, idx){
   if(ytId){
     const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
     // Render as poster — tap loads iframe
-    return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}')">
+    return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}');event.stopPropagation()">
       <img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
         <div style="width:56px;height:40px;background:rgba(255,0,0,.9);border-radius:8px;display:flex;align-items:center;justify-content:center">
@@ -1351,13 +1351,19 @@ function buildSlideMedia(a, raw, idx){
 }
 
 function loadSlideYt(idx, id){
+  const slide=document.getElementById('ss-'+idx);
+  if(!slide) return;
+  // Guard: if iframe already loaded, don't create a second one
+  if(slide.querySelector('iframe')) return;
   const poster=document.getElementById(`sp-poster-${idx}`);
   if(!poster) return;
   const iframe=document.createElement('iframe');
-  iframe.src=`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&mute=0`;
-  iframe.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+  // No autoplay — let user tap play inside the YouTube player
+  // This avoids double-audio from autoplay racing with the intersection observer
+  iframe.src=`https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`;
+  iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
   iframe.setAttribute('allowfullscreen','');
-  iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;';
+  iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;z-index:2;';
   poster.parentNode.insertBefore(iframe, poster);
   poster.remove();
 }
@@ -1365,6 +1371,8 @@ function loadSlideYt(idx, id){
 function playSlideAt(idx){
   const slide=document.getElementById('ss-'+idx);
   if(!slide) return;
+  // Don't interfere if a YouTube iframe is already loaded in this slide
+  if(slide.querySelector('iframe')) return;
   const video=slide.querySelector('video');
   if(video && video.paused) video.play().catch(()=>{});
 }
@@ -1373,8 +1381,14 @@ function pauseSlideAt(idx){
   const slide=document.getElementById('ss-'+idx);
   if(!slide) return;
   slide.querySelectorAll('video,audio').forEach(el=>{ try{el.pause();}catch(e){} });
-  // Remove YouTube iframes to stop playback
-  slide.querySelectorAll('iframe').forEach(f=>{ try{f.src='about:blank';f.remove();}catch(e){} });
+  // Stop YouTube iframes: postMessage pause command first, then blank+remove
+  slide.querySelectorAll('iframe').forEach(f=>{
+    try{
+      f.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}','*');
+    }catch(e){}
+    try{ f.src='about:blank'; }catch(e){}
+    setTimeout(()=>{ try{f.remove();}catch(e){} }, 50);
+  });
   // Restore poster if it was a YT slide
   const a=S.shortsArticles[idx];
   if(a){
