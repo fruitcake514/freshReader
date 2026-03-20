@@ -300,10 +300,10 @@
     #shorts-screen{background:#111;color:#fff}
     #shorts-screen .sb{display:none}
     .shorts-gallery{
-      padding-top:calc(var(--safe-top) + var(--nav-h) + 8px);
       padding-bottom:calc(16px + var(--safe-bottom));
       display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
     }
+    @media(max-width:500px){.shorts-gallery{grid-template-columns:1fr;gap:1px}}
     .shorts-gallery-card{position:relative;cursor:pointer;overflow:hidden;aspect-ratio:9/16;background:#000}
     .shorts-gallery-card img{width:100%;height:100%;object-fit:cover;display:block}
     .shorts-gallery-card .play-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;font-weight:700;padding:2px 4px;border-radius:3px}
@@ -478,8 +478,18 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
+  <!-- Category / feed / filter bars (same as normal mode) -->
+  <div class="cat-bar" id="shorts-cat-bar" style="background:#111;border-color:#333;margin-top:calc(var(--safe-top) + var(--nav-h))"></div>
+  <div class="feed-bar hidden" id="shorts-feed-bar" style="background:#1a1a1a;border-color:#333"></div>
+  <div class="filter-bar" style="background:#111;border-color:#333">
+    <div class="filter-pills">
+      <button class="filter-btn active" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
+      <button class="filter-btn" id="sf-unread" onclick="setShortsFilter('unread')" style="color:#aaa;border-color:#333">Unread</button>
+      <button class="filter-btn" id="sf-starred" onclick="setShortsFilter('starred')" style="color:#aaa;border-color:#333">Starred</button>
+    </div>
+  </div>
   <!-- Gallery grid (shown by default) -->
-  <div class="article-list" style="background:#111;flex:1;overflow-y:auto">
+  <div style="background:#111;flex:1;overflow-y:auto">
     <div class="shorts-gallery" id="shorts-gallery"></div>
   </div>
   <!-- Fullscreen player (hidden until card tapped) -->
@@ -543,7 +553,7 @@ const S = {
   readSet:new Set(), starSet:new Set(),
   curIdx:-1, curArticle:null,
   ytArticles:[], ytCurIdx:-1, ytCurArticle:null,
-  shortsArticles:[], shortsPlayerIdx:0,
+  shortsArticles:[], shortsFilter:'all', shortsPlayerIdx:0,
   unreadMap:{},
   cacheDays:7,
 };
@@ -704,7 +714,22 @@ function renderCatTabs(){
   bar.innerHTML=h;
 }
 function selectCatByIdx(i){ const c=window._catList&&window._catList[i]; if(c) selectCat(c.id); }
+function stopAllMedia(){
+  // Pause all native video/audio elements anywhere in the page
+  document.querySelectorAll('video,audio').forEach(el=>{ try{el.pause();}catch(e){} });
+  // Kill all iframes (stops YouTube/TikTok audio)
+  document.querySelectorAll('iframe').forEach(el=>{
+    try{ el.src='about:blank'; el.remove(); }catch(e){}
+  });
+  // Close fullscreen player if open
+  const sp=document.getElementById('shorts-player');
+  if(sp&&sp.classList.contains('open')) sp.classList.remove('open');
+  // Stop intersection observer
+  if(window._shortsObs){ window._shortsObs.disconnect(); window._shortsObs=null; }
+}
+
 function selectCat(id){
+  stopAllMedia(); // always kill media before switching category
   S.currentCat=id; S.currentFeed=null;
   renderCatTabs(); renderFeedBar();
   const label=currentCatLabel();
@@ -848,6 +873,7 @@ function renderReader(a){
       View original</a>`:''}`;
 }
 function closeReader(){
+  stopAllMedia();
   renderArticleList();
   showScreen('app-screen');
 }
@@ -961,6 +987,7 @@ async function markAllRead(){
 // YOUTUBE MODE
 // ═══════════════════════════════════════════════════════════
 async function loadYoutubeMode(){
+  stopAllMedia();
   showScreen('yt-screen');
   const label=currentCatLabel()||'YouTube';
   const titleEl=document.getElementById('yt-screen-title');
@@ -1056,7 +1083,7 @@ function renderYtReader(a){
       ${raw?`<div class="yt-video-desc" style="color:#ccc">${esc(stripTags(raw).slice(0,400))}</div>`:''}
     </div>`;
 }
-function closeYtReader(){ showScreen('yt-screen'); renderYtGrid(); }
+function closeYtReader(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(); }
 function toggleYtStar(){
   const a=S.ytCurArticle; if(!a) return;
   const starred=S.starSet.has(a.id);
@@ -1077,12 +1104,19 @@ function launchYt(id, posterId){
 // SHORTS / TIKTOK MODE — gallery first, fullscreen on tap
 // ═══════════════════════════════════════════════════════════
 async function loadShortsMode(){
+  stopAllMedia(); // kill any playing audio/video before switching
   showScreen('shorts-screen');
   document.getElementById('shorts-title').textContent=currentCatLabel()||'Shorts';
+  renderShortsCatBar();
+  renderShortsFeedBar();
   const gallery=document.getElementById('shorts-gallery');
   gallery.innerHTML='<div style="padding:60px 20px;text-align:center;color:#666">Loading…</div>';
   try{
-    const params={n:50,s:S.currentCat};
+    const params={n:50};
+    let streamId=S.currentFeed||S.currentCat;
+    if(S.shortsFilter==='unread') params.xt='user/-/state/com.google/read';
+    else if(S.shortsFilter==='starred') streamId='user/-/state/com.google/starred';
+    params.s=streamId;
     const data=await apiGet('/reader/api/0/stream/contents',params);
     const items=data.items||[];
     items.forEach(a=>{
@@ -1095,7 +1129,47 @@ async function loadShortsMode(){
   }catch(e){ gallery.innerHTML=`<div style="padding:60px 20px;text-align:center;color:#666">${esc(e.message)}</div>`; }
 }
 
-function exitShortsMode(){ selectCat('__all__'); }
+function exitShortsMode(){ stopAllMedia(); selectCat('__all__'); }
+
+function renderShortsCatBar(){
+  const bar=document.getElementById('shorts-cat-bar');
+  if(!bar) return;
+  const allU=S.unreadMap['user/-/state/com.google/reading-list']||0;
+  let h=`<button class="cat-tab" onclick="exitShortsMode()" style="color:#aaa;border-color:transparent">All</button>`;
+  S.cats.forEach((c,i)=>{
+    const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
+    const active=S.currentCat===c.id;
+    h+=`<button class="cat-tab ${active?'active':''}" onclick="selectCatByIdx(${i})" style="${active?'':'color:#aaa;border-color:transparent'}">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
+  });
+  bar.innerHTML=h;
+}
+
+function renderShortsFeedBar(){
+  const bar=document.getElementById('shorts-feed-bar');
+  if(!bar) return;
+  const cat=S.cats.find(c=>c.id===S.currentCat);
+  if(!cat||cat.feeds.length<2){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
+  bar.classList.remove('hidden');
+  window._feedBarFeeds=cat.feeds;
+  const allU=cat.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
+  let h=`<button class="feed-tab ${!S.currentFeed?'active':''}" onclick="selectShortsFeed(null)" style="${!S.currentFeed?'':'background:transparent;color:#aaa;border-color:#444'}">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
+  cat.feeds.forEach((f,i)=>{
+    const u=S.unreadMap[f.id]||0;
+    const active=S.currentFeed===f.id;
+    h+=`<button class="feed-tab ${active?'active':''}" onclick="selectShortsFeedByIdx(${i})" style="${active?'':'background:transparent;color:#aaa;border-color:#444'}">${esc(f.title||f.id)}${u?` <span class="badge">${u}</span>`:''}</button>`;
+  });
+  bar.innerHTML=h;
+}
+function selectShortsFeed(id){ S.currentFeed=id; loadShortsMode(); }
+function selectShortsFeedByIdx(i){ const f=window._feedBarFeeds&&window._feedBarFeeds[i]; if(f) selectShortsFeed(f.id); }
+function setShortsFilter(f){
+  S.shortsFilter=f;
+  ['all','unread','starred'].forEach(x=>{
+    const btn=document.getElementById('sf-'+x);
+    if(btn) btn.classList.toggle('active',x===f);
+  });
+  loadShortsMode();
+}
 
 function renderShortsGallery(){
   const gallery=document.getElementById('shorts-gallery');
@@ -1249,11 +1323,11 @@ function pauseSlideAt(idx){
   }
 }
 
-let _shortsObs=null;
+window._shortsObs=null;
 function observeShortsSlides(){
-  if(_shortsObs) _shortsObs.disconnect();
+  if(window._shortsObs) window._shortsObs.disconnect();
   const slidesEl=document.getElementById('shorts-slides');
-  _shortsObs=new IntersectionObserver(entries=>{
+  window._shortsObs=new IntersectionObserver(entries=>{
     entries.forEach(e=>{
       const idx=parseInt(e.target.dataset.idx);
       if(e.isIntersecting){
@@ -1271,7 +1345,7 @@ function observeShortsSlides(){
       }
     });
   },{root:slidesEl,threshold:0.6});
-  slidesEl.querySelectorAll('.short-slide').forEach(el=>_shortsObs.observe(el));
+  slidesEl.querySelectorAll('.short-slide').forEach(el=>window._shortsObs.observe(el));
 }
 
 // Scroll wheel through fullscreen slides
