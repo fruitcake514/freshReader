@@ -248,6 +248,21 @@
     }
     .open-ext:hover{border-color:var(--accent);color:var(--accent)}
 
+    /* ── SHARE EXPIRY BANNER ── */
+    .share-expiry{
+      display:flex;align-items:center;gap:8px;
+      padding:10px 18px;margin:0 0 16px;
+      background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+      border-radius:var(--radius-sm);font-size:.82rem;color:var(--text2);
+    }
+    .share-expiry svg{width:15px;height:15px;flex-shrink:0;color:var(--accent)}
+    .share-expired-screen{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:60dvh;gap:12px;color:var(--text3);text-align:center;padding:32px;
+    }
+    .share-expired-screen h2{font-family:var(--display);font-size:1.5rem;color:var(--text);margin-bottom:4px}
+    .share-expired-screen p{font-size:.9rem;line-height:1.6}
+
     /* ── TOAST ── */
     .toast{
       position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(16px);
@@ -438,6 +453,22 @@
     <button class="action-btn" onclick="openOrig()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Original
     </button>
+    <button class="action-btn" onclick="shareArticle()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share
+    </button>
+  </div>
+</div>
+
+<!-- ══ SHARED ARTICLE VIEW ══════════════════ -->
+<div id="share-screen" class="screen">
+  <div class="sb"></div>
+  <div class="reader-topbar">
+    <div style="width:38px"></div><!-- spacer so title centres -->
+    <div class="reader-topbar-feed" style="text-align:center;flex:1;font-weight:600;color:var(--text)">Shared Article</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+    <div class="reader-body" id="share-body"></div>
   </div>
 </div>
 
@@ -1277,6 +1308,9 @@ function openShortsPlayer(startIdx){
   const player=document.getElementById('shorts-player');
   player.classList.add('open');
   renderShortsSlides(startIdx);
+  // After innerHTML is set, replace video placeholders with real DOM <video> elements
+  // (required for iOS — innerHTML-injected <video> tags don't play on mobile Safari)
+  attachSlideVideos();
   // Scroll to tapped slide after render
   requestAnimationFrame(()=>{
     const slides=document.getElementById('shorts-slides');
@@ -1321,23 +1355,33 @@ function renderShortsSlides(startIdx){
   }).join('');
 }
 
+// buildSlideMedia returns HTML string for YouTube posters and placeholders.
+// For native video, it returns a placeholder div with data attributes — the real
+// <video> element is created via DOM after innerHTML is set (required for iOS playback).
 function buildSlideMedia(a, raw, idx){
   const tmp=document.createElement('div'); tmp.innerHTML=raw;
-  // Native video (TikTok via urlebird, Reddit)
+
+  // Native video (TikTok, Reddit, etc.)
   const video=tmp.querySelector('video');
   if(video){
     const source=video.querySelector('source');
     const src=source?.getAttribute('src')||video.getAttribute('src')||'';
     const poster=video.getAttribute('poster')||'';
-    if(src) return `<video src="${esc(src)}" ${poster?`poster="${esc(poster)}"`:''}
-      playsinline preload="metadata"
-      style="width:100%;height:100%;object-fit:contain;position:absolute;inset:0"></video>`;
+    if(src){
+      // Return a placeholder — real <video> created by attachSlideVideos() after render
+      return `<div class="slide-video-placeholder" id="svp-${idx}"
+        data-src="${esc(src)}"
+        ${poster?`data-poster="${esc(poster)}"`:''}
+        style="position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="rgba(255,255,255,.3)" stroke="none"/></svg>
+      </div>`;
+    }
   }
+
   // YouTube (iframe in content or URL)
   const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
   if(ytId){
     const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-    // Render as poster — tap loads iframe
     return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}');event.stopPropagation()">
       <img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
@@ -1347,7 +1391,28 @@ function buildSlideMedia(a, raw, idx){
       </div>
     </div>`;
   }
+
   return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#444;font-size:2rem">▶</div>`;
+}
+
+// After setting innerHTML on the slides container, replace each placeholder div
+// with a properly DOM-created <video> element. This is required on iOS —
+// <video> tags injected via innerHTML do not play on mobile Safari.
+function attachSlideVideos(){
+  document.querySelectorAll('.slide-video-placeholder').forEach(placeholder=>{
+    const src=placeholder.dataset.src;
+    const poster=placeholder.dataset.poster||'';
+    if(!src) return;
+    const video=document.createElement('video');
+    video.src=src;
+    if(poster) video.poster=poster;
+    video.playsInline=true;
+    video.controls=true;
+    video.preload='metadata';
+    video.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#000;';
+    // Replace placeholder with real video element
+    placeholder.parentNode.replaceChild(video, placeholder);
+  });
 }
 
 function loadSlideYt(idx, id){
@@ -1620,10 +1685,134 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').cat
 if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
 
 // ═══════════════════════════════════════════════════════════
+// SHARE LINK — encode article into URL hash, no login needed
+// Format: #share=<base64url(JSON)>
+// JSON: { v:1, exp:<unix-seconds>, article:{...} }
+// ═══════════════════════════════════════════════════════════
+const SHARE_EXPIRY_DAYS = 7;
+
+function shareArticle(){
+  const a = S.curArticle;
+  if(!a){ toast('No article to share'); return; }
+
+  const expiry = Math.floor(Date.now()/1000) + SHARE_EXPIRY_DAYS * 86400;
+
+  // Package just what's needed to render the article
+  const payload = {
+    v: 1,
+    exp: expiry,
+    a: {
+      id:       a.id,
+      title:    a.title || '',
+      author:   a.author || '',
+      published:a.published || 0,
+      canonical:a.canonical || [],
+      alternate:a.alternate || [],
+      origin:   a.origin   || {},
+      summary:  a.summary  || {},
+      content:  a.content  || {},
+    }
+  };
+
+  let encoded;
+  try {
+    const json = JSON.stringify(payload);
+    // btoa needs latin1 — encode UTF-8 via encodeURIComponent first
+    encoded = btoa(unescape(encodeURIComponent(json)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); // url-safe base64
+  } catch(e) {
+    toast('Could not encode article'); return;
+  }
+
+  const url = `${location.origin}${location.pathname}#share=${encoded}`;
+
+  // Try native share sheet first, fall back to clipboard
+  if(navigator.share){
+    navigator.share({ title: a.title||'Shared article', url }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(url).then(()=>{
+      toast('Share link copied — expires in 7 days');
+    }).catch(()=>{
+      // Last resort: show the URL in a prompt so user can copy manually
+      prompt('Copy this share link (expires in 7 days):', url);
+    });
+  }
+}
+
+function checkShareLink(){
+  const hash = location.hash;
+  if(!hash.startsWith('#share=')) return false;
+  const encoded = hash.slice(7);
+  try {
+    const json = decodeURIComponent(escape(atob(
+      encoded.replace(/-/g,'+').replace(/_/g,'/')
+    )));
+    const payload = JSON.parse(json);
+    if(!payload || payload.v !== 1 || !payload.a) throw new Error('Invalid payload');
+
+    const now = Math.floor(Date.now()/1000);
+    const screen = document.getElementById('share-screen');
+    const body   = document.getElementById('share-body');
+
+    showScreen('share-screen');
+
+    if(payload.exp && now > payload.exp){
+      // Expired
+      body.innerHTML = `<div class="share-expired-screen">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <h2>Link Expired</h2>
+        <p>This shared article link expired on<br><strong>${new Date(payload.exp*1000).toLocaleDateString(undefined,{dateStyle:'long'})}</strong>.<br><br>Ask the sender to share a fresh link.</p>
+      </div>`;
+      return true;
+    }
+
+    // Valid — render the article
+    const a = payload.a;
+    const daysLeft = Math.ceil((payload.exp - now) / 86400);
+    const expDate  = new Date(payload.exp*1000).toLocaleDateString(undefined,{dateStyle:'long'});
+    const raw  = a.summary?.content || a.content?.content || '';
+    const url  = a.canonical?.[0]?.href || a.alternate?.[0]?.href || '';
+    const feed = a.origin?.title || '';
+    const date = a.published ? new Date(a.published*1000).toLocaleString(undefined,{dateStyle:'long',timeStyle:'short'}) : '';
+    const author = a.author ? `By ${a.author}` : '';
+
+    body.innerHTML = `
+      <div class="share-expiry">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Shared link · expires ${expDate} (${daysLeft} day${daysLeft!==1?'s':''} left)
+      </div>
+      <div class="reader-feed-label">${esc(feed)}</div>
+      <div class="reader-title">${esc(a.title||'Untitled')}</div>
+      <div class="reader-byline">
+        ${author?`<span>${esc(author)}</span>`:''}
+        ${date?`<span>${esc(date)}</span>`:''}
+      </div>
+      <div class="reader-content">${sanitize(raw)}</div>
+      ${url?`<a class="open-ext" href="${esc(url)}" target="_blank" rel="noopener">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        View original article</a>`:''}`;
+    return true;
+  } catch(e) {
+    console.warn('Share link parse error:', e);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // AUTO LOGIN
 // ═══════════════════════════════════════════════════════════
 loadCacheDays();
 (async function(){
+  // Check for a share link in the URL hash first — no login needed
+  if(checkShareLink()) return;
+
   const srv=localStorage.getItem('fr_server');
   const auth=localStorage.getItem('fr_auth');
   const user=localStorage.getItem('fr_user')||'';
