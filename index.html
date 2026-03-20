@@ -165,7 +165,7 @@
     .skel-line{height:13px;background:var(--bg3);border-radius:4px;margin-bottom:7px}
 
     /* ── READER SCREEN ── */
-    #reader-screen{background:var(--bg);overflow:hidden}
+    #reader-screen{background:var(--bg)}
     .reader-topbar{
       position:sticky;top:var(--safe-top);z-index:50;
       background:var(--surface);border-bottom:1px solid var(--border);
@@ -233,13 +233,14 @@
     .action-btn svg{width:16px;height:16px}
     .swipe-hint{
       position:fixed;top:50%;transform:translateY(-50%);
-      width:30px;height:30px;background:var(--surface);border:1px solid var(--border);
+      width:44px;height:44px;background:var(--surface);border:1px solid var(--border);
       border-radius:50%;display:flex;align-items:center;justify-content:center;
-      color:var(--text3);opacity:0;pointer-events:none;transition:opacity .15s;z-index:30;
+      color:var(--text2);opacity:0;pointer-events:none;transition:opacity .15s;z-index:200;
+      cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);
     }
-    .swipe-hint.l{left:5px}.swipe-hint.r{right:5px}
-    .swipe-hint.show{opacity:1}
-    .swipe-hint svg{width:13px;height:13px}
+    .swipe-hint.l{left:8px}.swipe-hint.r{right:8px}
+    .swipe-hint.show{opacity:1;pointer-events:auto}
+    .swipe-hint svg{width:18px;height:18px}
     .open-ext{
       display:inline-flex;align-items:center;gap:5px;margin-top:20px;
       padding:9px 16px;border:1.5px solid var(--border);border-radius:100px;
@@ -261,7 +262,7 @@
     .spin{animation:spin .65s linear infinite}
 
     /* ══ YOUTUBE CATEGORY MODE ══════════════════════════════ */
-    #yt-screen{background:#0f0f0f;color:#fff}
+    #yt-screen{background:#0f0f0f;color:#fff;height:100dvh;max-height:100dvh}
     #yt-screen .sb{background:#0f0f0f}
     #yt-screen .topbar{background:rgba(15,15,15,.95);border-color:#272727}
     #yt-screen .cat-bar{background:#0f0f0f;border-color:#272727}
@@ -280,18 +281,28 @@
     .yt-card-sub{font-size:.78rem;color:#aaa}
 
     /* YT Reader */
-    #yt-reader{background:#0f0f0f;color:#fff}
-    #yt-reader .sb{background:#0f0f0f}
-    #yt-reader .reader-topbar{background:rgba(15,15,15,.95);border-color:#272727}
-    .yt-player-wrap{background:#000;width:100%}
-    .yt-player-ratio{position:relative;padding-top:56.25%}
+    #yt-reader{background:#0f0f0f;color:#fff;height:100dvh;max-height:100dvh}
+    #yt-reader .sb{background:#0f0f0f;flex-shrink:0}
+    #yt-reader .reader-topbar{background:rgba(15,15,15,.95);border-color:#272727;flex-shrink:0}
+    /* Body scrolls within remaining space after sb + topbar */
+    #yt-reader-body-wrap{
+      flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      display:flex;flex-direction:column;
+    }
+    .yt-player-wrap{background:#000;width:100%;flex-shrink:0}
+    /* Video ratio: cap at 56.25vw height but never more than 40vh so info is visible */
+    .yt-player-ratio{
+      position:relative;
+      /* Use the smaller of 56.25% width or 40vh so it never pushes content offscreen */
+      padding-top:min(56.25%, 40vh);
+    }
     .yt-player-ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
     .yt-player-poster{position:relative;cursor:pointer}
-    .yt-video-info{padding:14px 16px}
-    .yt-video-title{font-size:1.1rem;font-weight:700;line-height:1.3;color:#fff;margin-bottom:8px}
-    .yt-video-meta{font-size:.82rem;color:#aaa;margin-bottom:12px}
-    .yt-video-desc{font-size:.875rem;color:#ccc;line-height:1.6;white-space:pre-wrap}
-    .yt-actions{display:flex;gap:0;border-top:1px solid #272727;border-bottom:1px solid #272727;margin:10px 0}
+    .yt-video-info{padding:14px 16px;flex:1}
+    .yt-video-title{font-size:1.05rem;font-weight:700;line-height:1.3;color:#fff;margin-bottom:6px}
+    .yt-video-meta{font-size:.8rem;color:#aaa;margin-bottom:10px}
+    .yt-video-desc{font-size:.85rem;color:#ccc;line-height:1.55;white-space:pre-wrap}
+    .yt-actions{display:flex;gap:0;border-top:1px solid #272727;border-bottom:1px solid #272727;margin:8px 0}
     .yt-action-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;font-size:.72rem;color:#aaa;transition:color .15s}
     .yt-action-btn:hover{color:#fff}
     .yt-action-btn svg{width:22px;height:22px}
@@ -413,8 +424,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </button>
   </div>
-  <div class="swipe-hint l" id="sh-l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div>
-  <div class="swipe-hint r" id="sh-r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+  <button class="swipe-hint l" id="sh-l" onclick="navigateArticle(-1)" aria-label="Previous article">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="swipe-hint r" id="sh-r" onclick="navigateArticle(1)" aria-label="Next article">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
   <div class="reader-swipe" id="reader-swipe"><div class="reader-body" id="reader-body"></div></div>
   <div class="reader-actions">
     <button class="action-btn" onclick="markReadCurrent()" id="mark-read-btn">
@@ -445,6 +460,19 @@
     </button>
   </div>
   <div class="cat-bar" id="yt-cat-bar" style="background:#0f0f0f;border-color:#272727"></div>
+  <div style="padding:8px 12px;background:#0f0f0f;border-bottom:1px solid #272727;display:flex;gap:8px">
+    <input id="yt-search-input" type="search" placeholder="Paste a YouTube URL to watch in-app, or type to search…"
+      style="flex:1;padding:8px 12px;border-radius:20px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:.85rem;outline:none"
+      onkeydown="if(event.key==='Enter') ytSearch()"/>
+    <button onclick="ytSearch()" style="padding:8px 14px;background:#c00;color:#fff;border-radius:20px;font-size:.8rem;font-weight:700;flex-shrink:0">Go</button>
+  </div>
+  <div class="filter-bar" style="background:#0f0f0f;border-color:#272727">
+    <div class="filter-pills">
+      <button class="filter-btn active" id="yf-all" onclick="setYtFilter('all')" style="color:#aaa;border-color:#444">All</button>
+      <button class="filter-btn" id="yf-unread" onclick="setYtFilter('unread')" style="color:#aaa;border-color:#444">Unread</button>
+      <button class="filter-btn" id="yf-starred" onclick="setYtFilter('starred')" style="color:#aaa;border-color:#444">Starred</button>
+    </div>
+  </div>
   <div class="article-list" style="background:#0f0f0f"><div class="yt-grid" id="yt-grid"></div></div>
 </div>
 
@@ -460,7 +488,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </button>
   </div>
-  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0f0f0f" id="yt-reader-body"></div>
+  <div id="yt-reader-body-wrap">
+    <div id="yt-reader-body"></div>
+    <div style="height:calc(16px + var(--safe-bottom))"></div>
+  </div>
 </div>
 
 <!-- ══ SHORTS / TIKTOK SCREEN ══════════════ -->
@@ -552,7 +583,7 @@ const S = {
   filter:'all',
   readSet:new Set(), starSet:new Set(),
   curIdx:-1, curArticle:null,
-  ytArticles:[], ytCurIdx:-1, ytCurArticle:null,
+  ytArticles:[], ytFilter:'all', ytCurIdx:-1, ytCurArticle:null,
   shortsArticles:[], shortsFilter:'all', shortsPlayerIdx:0,
   unreadMap:{},
   cacheDays:7,
@@ -591,9 +622,22 @@ function pruneByDate(){
     if(a.published && a.published < cutoff) delete S.cachedArticles[id];
   }
 }
+const STAR_CACHE_KEY='fr_starred_articles';
 function cacheArticles(items){
   items.forEach(a=>{ S.cachedArticles[a.id]=a; });
   persistArticles();
+  persistStarredArticles();
+}
+function persistStarredArticles(){
+  const starred={};
+  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starred[id]=S.cachedArticles[id]; }
+  try{ localStorage.setItem(STAR_CACHE_KEY,JSON.stringify(starred)); }catch(e){}
+}
+function loadStarredArticles(){
+  try{
+    const d=localStorage.getItem(STAR_CACHE_KEY);
+    if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
+  }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -671,6 +715,7 @@ function doLogout(){
 async function loadApp(){
   showScreen('app-screen');
   loadPersistedArticles();
+  loadStarredArticles(); // starred articles survive cache wipes
   await Promise.all([loadCategories(),loadUnreadCounts()]);
   await loadArticles();
 }
@@ -726,6 +771,7 @@ function stopAllMedia(){
   if(sp&&sp.classList.contains('open')) sp.classList.remove('open');
   // Stop intersection observer
   if(window._shortsObs){ window._shortsObs.disconnect(); window._shortsObs=null; }
+  if(window._shortsPlaying) window._shortsPlaying.clear();
 }
 
 function selectCat(id){
@@ -889,6 +935,7 @@ function toggleStar(){
   const starred=S.starSet.has(a.id);
   apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Starred ★'); }
+  persistStarredArticles();
   updateStarBtn();
 }
 async function markReadCurrent(){
@@ -1016,19 +1063,34 @@ async function loadYoutubeMode(){
     renderYtGrid();
   }catch(e){ grid.innerHTML=`<div class="empty" style="color:#aaa"><p>${esc(e.message)}</p></div>`; }
 }
+function setYtFilter(f){
+  S.ytFilter=f;
+  ['all','unread','starred'].forEach(x=>{
+    const btn=document.getElementById('yf-'+x);
+    if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; }
+  });
+  renderYtGrid();
+}
 function renderYtGrid(){
   const grid=document.getElementById('yt-grid');
-  grid.innerHTML=S.ytArticles.map((a,i)=>{
+  let arts=S.ytArticles;
+  if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
+  else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
+  if(!arts.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No videos</p></div>'; return; }
+  grid.innerHTML=arts.map((a)=>{
+    const trueIdx=S.ytArticles.indexOf(a);
     const raw=a.summary?.content||a.content?.content||'';
     const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
     const thumb=ytId?`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`:firstImg(raw)||'';
     const ch=a.origin?.title||a.author||'';
     const date=fmtDate(a.published*1000);
     const read=S.readSet.has(a.id);
-    return `<div class="yt-card" onclick="openYtArticle(${i})" style="${read?'opacity:.6':''}">
+    const starred=S.starSet.has(a.id);
+    return `<div class="yt-card" onclick="openYtArticle(${trueIdx})" style="${read?'opacity:.6':''}">
       <div class="yt-thumb-wrap">
         ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.style.display='none'"/>`:'<div style="position:absolute;inset:0;background:#222;display:flex;align-items:center;justify-content:center;color:#555">▶</div>'}
         ${!read?'<div style="position:absolute;top:8px;left:8px;width:8px;height:8px;background:#f87171;border-radius:50%"></div>':''}
+        ${starred?'<div style="position:absolute;top:8px;right:8px;color:#f59e0b;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.8)">★</div>':''}
       </div>
       <div class="yt-card-info">
         <div class="yt-channel-icon">${ch.charAt(0).toUpperCase()}</div>
@@ -1039,6 +1101,18 @@ function renderYtGrid(){
       </div>
     </div>`;
   }).join('');
+}
+function ytSearch(){
+  const q=(document.getElementById('yt-search-input').value||'').trim();
+  if(!q) return;
+  const ytId=extractYtId(q);
+  if(ytId){
+    const fake={id:'search-'+ytId,title:q,canonical:[{href:'https://www.youtube.com/watch?v='+ytId}],origin:{title:'YouTube'},author:'',published:Math.floor(Date.now()/1000),summary:{content:''},_search:true};
+    S.ytCurArticle=fake; renderYtReader(fake); showScreen('yt-reader');
+  } else {
+    window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank','noopener');
+    toast('Opening YouTube search…');
+  }
 }
 function openYtArticle(idx){
   const a=S.ytArticles[idx]; if(!a) return;
@@ -1089,6 +1163,7 @@ function toggleYtStar(){
   const starred=S.starSet.has(a.id);
   apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Saved ★'); }
+  persistStarredArticles();
   renderYtReader(a);
 }
 function launchYt(id, posterId){
@@ -1291,16 +1366,15 @@ function playSlideAt(idx){
   const slide=document.getElementById('ss-'+idx);
   if(!slide) return;
   const video=slide.querySelector('video');
-  if(video) video.play().catch(()=>{});
+  if(video && video.paused) video.play().catch(()=>{});
 }
 
 function pauseSlideAt(idx){
   const slide=document.getElementById('ss-'+idx);
   if(!slide) return;
-  const video=slide.querySelector('video');
-  if(video) video.pause();
+  slide.querySelectorAll('video,audio').forEach(el=>{ try{el.pause();}catch(e){} });
   // Remove YouTube iframes to stop playback
-  slide.querySelectorAll('iframe').forEach(f=>f.remove());
+  slide.querySelectorAll('iframe').forEach(f=>{ try{f.src='about:blank';f.remove();}catch(e){} });
   // Restore poster if it was a YT slide
   const a=S.shortsArticles[idx];
   if(a){
@@ -1324,23 +1398,29 @@ function pauseSlideAt(idx){
 }
 
 window._shortsObs=null;
+window._shortsPlaying=new Set();
 function observeShortsSlides(){
   if(window._shortsObs) window._shortsObs.disconnect();
+  window._shortsPlaying.clear();
   const slidesEl=document.getElementById('shorts-slides');
   window._shortsObs=new IntersectionObserver(entries=>{
     entries.forEach(e=>{
       const idx=parseInt(e.target.dataset.idx);
       if(e.isIntersecting){
         S.shortsPlayerIdx=idx;
-        document.getElementById('shorts-player-title').textContent=S.shortsArticles[idx]?.title||'';
-        playSlideAt(idx);
-        // Mark read
+        const titleEl=document.getElementById('shorts-player-title');
+        if(titleEl) titleEl.textContent=S.shortsArticles[idx]?.title||'';
+        if(!window._shortsPlaying.has(idx)){
+          window._shortsPlaying.add(idx);
+          playSlideAt(idx);
+        }
         const a=S.shortsArticles[idx];
         if(a&&!S.readSet.has(a.id)){
           S.readSet.add(a.id);
           apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
         }
       } else {
+        window._shortsPlaying.delete(idx);
         pauseSlideAt(idx);
       }
     });
@@ -1472,7 +1552,10 @@ function openSettings(){
 function closeSettingsOutside(e){ if(e.target===document.getElementById('settings-overlay')) document.getElementById('settings-overlay').classList.remove('open'); }
 async function clearArticleCache(){
   if(!confirm('Delete cached articles and re-fetch?')) return;
+  const starredBackup={};
+  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starredBackup[id]=S.cachedArticles[id]; }
   S.cachedArticles={}; localStorage.removeItem(DB_KEY);
+  Object.assign(S.cachedArticles,starredBackup); persistArticles();
   document.getElementById('settings-overlay').classList.remove('open');
   toast('Cache cleared — reloading…');
   await sleep(500);
