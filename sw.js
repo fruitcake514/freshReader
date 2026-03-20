@@ -1,8 +1,8 @@
-// v4 — never cache HTML; only cache icons/manifest; always network-first for navigation
-const CACHE = 'freshrss-pwa-v4';
+// v5 — cache index.html for offline; stale-while-revalidate for the app shell
+const CACHE = 'freshrss-pwa-v5';
 
-// Only pre-cache true static assets — no HTML files
 const PRECACHE = [
+  './index.html',
   './manifest.json',
   './favicon.ico',
   './icons/icon-72.png',
@@ -41,20 +41,31 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
 
-  // NEVER intercept:
-  // 1. Navigation requests (HTML page loads) — always hit network to avoid redirect errors on iOS
-  if (req.mode === 'navigate') return;
-
-  // 2. FreshRSS API calls — always live
+  // Never intercept FreshRSS API calls — always live, fall through on failure
   if (url.pathname.includes('/api/greader') || url.pathname.includes('/accounts/ClientLogin')) return;
 
-  // 3. Anything cross-origin (external images, fonts, video CDNs)
+  // Never intercept cross-origin requests (images, fonts, video CDNs)
   if (url.origin !== self.location.origin) return;
 
-  // 4. HTML files — never cache, always network
-  if (req.destination === 'document' || url.pathname.endsWith('.html')) return;
+  // For navigation (page load) and HTML files: stale-while-revalidate.
+  // Serve from cache immediately so the app opens offline, update in background.
+  if (req.mode === 'navigate' || req.destination === 'document' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      caches.open(CACHE).then(cache =>
+        cache.match('./index.html').then(cached => {
+          const networkFetch = fetch(req).then(res => {
+            if (res.ok && res.status === 200) cache.put('./index.html', res.clone());
+            return res;
+          }).catch(() => cached); // network failed — cached already returned
+          // Return cache immediately; update in background
+          return cached || networkFetch;
+        })
+      )
+    );
+    return;
+  }
 
-  // Cache-first for same-origin static assets (icons, manifest, etc.)
+  // Cache-first for all other same-origin static assets (icons, manifest)
   e.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
@@ -64,7 +75,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(req, clone));
         }
         return res;
-      });
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });
