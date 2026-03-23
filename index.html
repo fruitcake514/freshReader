@@ -387,9 +387,9 @@
       <p>Your RSS, beautifully read</p>
     </div>
     <div class="field"><label>FreshRSS URL</label><input id="srv" type="url" placeholder="https://rss.yourdomain.com" autocomplete="url"/></div>
-    <div class="field"><label>Fever API Key</label><input id="feverkey" type="text" placeholder="your-fever-api-key" autocomplete="off" style="font-family:monospace"/></div>
-    <div class="field" style="margin-bottom:0"><label style="margin-bottom:3px">Fever API path <span style="font-weight:400;text-transform:none;letter-spacing:0">(usually /api/fever.php)</span></label><input id="feverpath" type="text" placeholder="/api/fever.php" value="/api/fever.php" autocomplete="off"/></div>
-    <button class="btn-primary" id="login-btn" onclick="doLogin()">Connect</button>
+    <div class="field"><label>Username</label><input id="usr" type="text" placeholder="admin" autocomplete="username"/></div>
+    <div class="field" style="margin-bottom:0"><label>Password</label><input id="pwd" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -600,7 +600,7 @@
 // STATE
 // ═══════════════════════════════════════════════════════════
 const S = {
-  server:'', apiKey:'', apiPath:'/api/fever.php',
+  server:'', auth:'', user:'',
   cats:[], feeds:[],
   articles:[],
   cachedArticles:{},
@@ -635,11 +635,11 @@ const STAR_CACHE_KEY='fr_starred_articles';
 
 function saveSession(){
   localStorage.setItem('fr_server', S.server);
-  localStorage.setItem('fr_apikey', S.apiKey);
-  localStorage.setItem('fr_apipath', S.apiPath);
+  localStorage.setItem('fr_auth', S.auth);
+  localStorage.setItem('fr_user', S.user);
 }
 function clearSession(){
-  ['fr_server','fr_apikey','fr_apipath'].forEach(k=>localStorage.removeItem(k));
+  ['fr_server','fr_auth','fr_user'].forEach(k=>localStorage.removeItem(k));
 }
 function loadCacheDays(){ S.cacheDays=parseInt(localStorage.getItem('fr_cache_days')||'7'); }
 function saveCacheDays(){ const v=document.getElementById('cache-days-sel').value; S.cacheDays=parseInt(v); localStorage.setItem('fr_cache_days',v); toast('Auto-delete set'); }
@@ -736,55 +736,23 @@ function toast(msg,dur=2400){
 }
 
 // ═══════════════════════════════════════════════════════════
-// FEVER API
+// GREADER API
 // ═══════════════════════════════════════════════════════════
-async function feverGet(params={}){
-  const url=new URL(S.server.replace(/\/$/,'')+S.apiPath);
-  url.searchParams.set('api_key', S.apiKey);
-  for(const [k,v] of Object.entries(params)) url.searchParams.set(k,v);
-  const res=await fetch(url.toString());
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data=await res.json();
-  if(data.auth===0) throw new Error('auth_failed');
-  return data;
-}
-// Fever uses POST for write operations (mark read/starred)
-async function feverPost(action, params={}){
-  const url=new URL(S.server.replace(/\/$/,'')+S.apiPath);
-  url.searchParams.set('api_key', S.apiKey);
-  const body=new URLSearchParams({...params, [action]:''});
-  const res=await fetch(url.toString(), {
-    method:'POST',
-    headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:body.toString()
-  });
+async function apiGet(path, params={}){
+  params.output='json';
+  const qs=new URLSearchParams(params).toString();
+  const res=await fetch(`${S.server}/api/greader.php${path}?${qs}`,{headers:{Authorization:`GoogleLogin auth=${S.auth}`}});
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
-
-// Convert Fever item to the internal article shape the rest of the app uses
-function feverItemToArticle(item, feedMap){
-  const feed=feedMap[item.feed_id]||{};
-  const catId=feed.group_id?String(feed.group_id):null;
-  return {
-    id: String(item.id),
-    title: item.title||'',
-    author: item.author||'',
-    published: item.created_on_time||0,
-    summary: { content: item.html||'' },
-    content: { content: item.html||'' },
-    canonical: item.url?[{href:item.url}]:[],
-    alternate: item.url?[{href:item.url}]:[],
-    origin: {
-      title: feed.title||'',
-      streamId: String(item.feed_id),
-      htmlUrl: feed.site_url||''
-    },
-    _fever_feed_id: String(item.feed_id),
-    _fever_cat_id: catId,
-    _is_read: item.is_read===1||item.is_read===true,
-    _is_saved: item.is_saved===1||item.is_saved===true,
-  };
+async function apiPost(path, body){
+  const res=await fetch(`${S.server}/api/greader.php${path}`,{
+    method:'POST',
+    headers:{Authorization:`GoogleLogin auth=${S.auth}`,'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams(body).toString()
+  });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -794,24 +762,27 @@ async function doLogin(){
   const btn=document.getElementById('login-btn');
   const err=document.getElementById('login-err');
   const server=document.getElementById('srv').value.trim().replace(/\/$/,'');
-  const apiKey=document.getElementById('feverkey').value.trim();
-  const apiPath=document.getElementById('feverpath').value.trim()||'/api/fever.php';
-  if(!server||!apiKey){err.textContent='Please fill all fields.';err.style.display='block';return;}
-  err.style.display='none'; btn.disabled=true; btn.textContent='Connecting…';
-  S.server=server; S.apiKey=apiKey; S.apiPath=apiPath;
+  const user=document.getElementById('usr').value.trim();
+  const pass=document.getElementById('pwd').value;
+  if(!server||!user||!pass){err.textContent='Please fill all fields.';err.style.display='block';return;}
+  err.style.display='none'; btn.disabled=true; btn.textContent='Signing in…';
   try{
-    const data=await feverGet();
-    if(data.auth!==1) throw new Error('Invalid API key');
-    saveSession();
-    await loadApp();
+    const res=await fetch(`${server}/api/greader.php/accounts/ClientLogin`,{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({Email:user,Passwd:pass}).toString()
+    });
+    const text=await res.text();
+    if(!res.ok) throw new Error('Invalid credentials');
+    const m=text.match(/Auth=([^\n]+)/);
+    if(!m) throw new Error('Auth token not found');
+    S.server=server; S.auth=m[1]; S.user=user;
+    saveSession(); await loadApp();
   }catch(e){
-    err.textContent=e.message==='auth_failed'?'Invalid API key':e.message||'Connection failed';
-    err.style.display='block';
-    S.server=''; S.apiKey='';
-  }finally{ btn.disabled=false; btn.textContent='Connect'; }
+    err.textContent=e.message||'Connection failed';err.style.display='block';
+  }finally{ btn.disabled=false; btn.textContent='Sign in'; }
 }
 function doLogout(){
-  clearSession(); S.apiKey=''; S.articles=[]; S.cats=[];
+  clearSession(); S.auth=''; S.articles=[]; S.cats=[];
   showScreen('login-screen');
 }
 
@@ -831,7 +802,7 @@ async function loadApp(){
     return;
   }
   try{
-    await loadFeedsAndGroups();
+    await Promise.all([loadCategories(), loadUnreadCounts()]);
     await loadArticles();
     showOfflineBanner(false);
   }catch(e){
@@ -888,53 +859,31 @@ function renderFromCache(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// LOAD FEEDS / GROUPS (categories)
+// LOAD CATEGORIES + UNREAD (GReader)
 // ═══════════════════════════════════════════════════════════
-async function loadFeedsAndGroups(){
-  const [groupsData, feedsData] = await Promise.all([
-    feverGet({groups:''}),
-    feverGet({feeds:''})
-  ]);
-
-  const groups = groupsData.groups||[];
-  const feedsGroups = groupsData.feeds_groups||[];
-  const feeds = feedsData.feeds||[];
-
-  // Build feed→group map
-  const feedGroupMap = {};
-  feedsGroups.forEach(fg=>{
-    const ids=(fg.feed_ids||'').split(',').map(s=>s.trim()).filter(Boolean);
-    ids.forEach(fid=>{ feedGroupMap[fid]=String(fg.group_id); });
-  });
-
-  // Build feed map by id
-  const feedMap = {};
-  feeds.forEach(f=>{ feedMap[String(f.id)]={ ...f, group_id: feedGroupMap[String(f.id)]||null }; });
-  S._feverFeedMap = feedMap;
-
-  // Build cats from groups
-  const catMap = {};
-  groups.forEach(g=>{
-    catMap[String(g.id)]={ label:g.title, feeds:[] };
-  });
-  feeds.forEach(f=>{
-    const gid = feedGroupMap[String(f.id)];
-    if(gid && catMap[gid]){
-      catMap[gid].feeds.push({ id:String(f.id), title:f.title, site_url:f.site_url });
-    } else {
-      if(!catMap['__none__']) catMap['__none__']={ label:'Uncategorized', feeds:[] };
-      catMap['__none__'].feeds.push({ id:String(f.id), title:f.title, site_url:f.site_url });
+async function loadCategories(){
+  try{
+    const data=await apiGet('/reader/api/0/subscription/list');
+    const subs=data.subscriptions||[];
+    const catMap={};
+    for(const sub of subs){
+      const cats=sub.categories||[];
+      if(!cats.length){ if(!catMap['__none__']) catMap['__none__']={label:'Uncategorized',feeds:[]}; catMap['__none__'].feeds.push(sub); }
+      else{ for(const c of cats){ if(!catMap[c.id]) catMap[c.id]={label:c.label,feeds:[]}; catMap[c.id].feeds.push(sub); } }
     }
-  });
-  S.cats = Object.entries(catMap).map(([id,v])=>({id,...v}));
-  S.feeds = feeds;
-  window._catList = S.cats;
+    S.cats=Object.entries(catMap).map(([id,v])=>({id,...v}));
+    S.feeds=subs;
+    window._catList=S.cats;
+    renderCatTabs();
+  }catch(e){ console.error('loadCategories',e); }
+}
 
-  // Compute unread counts from feed data (Fever includes unread_count per feed)
-  S.unreadMap = {};
-  feeds.forEach(f=>{ S.unreadMap[String(f.id)]=f.unread_item_count||0; });
-
-  renderCatTabs();
+async function loadUnreadCounts(){
+  try{
+    const data=await apiGet('/reader/api/0/unread-count');
+    S.unreadMap={};
+    (data.unreadcounts||[]).forEach(u=>{ S.unreadMap[u.id]=u.count; });
+  }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -942,7 +891,7 @@ async function loadFeedsAndGroups(){
 // ═══════════════════════════════════════════════════════════
 function renderCatTabs(){
   const bar=document.getElementById('cat-bar');
-  const allU=Object.values(S.unreadMap).reduce((s,n)=>s+n,0);
+  const allU=S.unreadMap['user/-/state/com.google/reading-list']||0;
   let h=`<button class="cat-tab ${S.currentCat==='__all__'?'active':''}" onclick="selectCat('__all__')">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
   S.cats.forEach((c,i)=>{
     const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
@@ -992,60 +941,40 @@ function setFilter(f){
 }
 
 // ═══════════════════════════════════════════════════════════
-// LOAD ARTICLES (Fever)
+// LOAD ARTICLES (GReader)
 // ═══════════════════════════════════════════════════════════
 async function loadArticles(){
   const el=document.getElementById('list-content');
   el.innerHTML=skelHtml(5);
   try{
-    const feedMap=S._feverFeedMap||{};
-    let items=[];
-
-    if(S.filter==='starred'){
-      const data=await feverGet({saved_item_ids:''});
-      const ids=(data.saved_item_ids||'').split(',').filter(Boolean);
-      if(ids.length){
-        const chunks=chunkArray(ids,50);
-        for(const chunk of chunks){
-          const d=await feverGet({items:'',withids:chunk.join(',')});
-          items.push(...(d.items||[]).map(i=>feverItemToArticle(i,feedMap)));
-        }
-      }
-    } else if(S.currentFeed){
-      const data=await feverGet({items:'',feed_ids:S.currentFeed});
-      items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-    } else if(S.currentCat==='__all__'){
-      const data=await feverGet({items:''});
-      items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-    } else {
-      // Specific category — get feeds in that cat, fetch items for those feeds
-      const cat=S.cats.find(c=>c.id===S.currentCat);
-      if(cat&&cat.feeds.length){
-        const feedIds=cat.feeds.map(f=>f.id).join(',');
-        const data=await feverGet({items:'',feed_ids:feedIds});
-        items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-      }
-    }
-
-    // Mark read/starred from Fever data
+    const params={n:50};
+    let streamId;
+    if(S.currentFeed) streamId=S.currentFeed;
+    else if(S.currentCat==='__all__') streamId='user/-/state/com.google/reading-list';
+    else streamId=S.currentCat;
+    if(S.filter==='unread') params.xt='user/-/state/com.google/read';
+    else if(S.filter==='starred') streamId='user/-/state/com.google/starred';
+    params.s=streamId;
+    const data=await apiGet('/reader/api/0/stream/contents',params);
+    let items=data.items||[];
     items.forEach(a=>{
-      if(a._is_read) S.readSet.add(a.id);
-      if(a._is_saved){ S.starSet.add(a.id); }
+      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+      if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
     });
-
-    // Apply unread filter
-    if(S.filter==='unread') items=items.filter(a=>!S.readSet.has(a.id));
 
     // For __all__, exclude categories the user has hidden from the main feed
     if(S.currentCat==='__all__' && S.excludedCatIds.size>0 && S.filter!=='starred'){
       items=items.filter(a=>{
-        const catId=a._fever_cat_id;
-        return !catId || !S.excludedCatIds.has(catId);
+        // GReader stream IDs for categories look like "user/-/label/CategoryName"
+        // The feed's origin.streamId is the feed URL stream id; we match via subscription categories
+        const feedId=a.origin?.streamId;
+        if(!feedId) return true;
+        // Find which cat this feed belongs to
+        const cat=S.cats.find(c=>c.feeds.some(f=>f.id===feedId));
+        if(!cat) return true;
+        return !S.excludedCatIds.has(cat.id);
       });
     }
-
-    // Sort newest first (Fever returns newest first by default, but let's ensure it)
-    items.sort((a,b)=>(b.published||0)-(a.published||0));
 
     cacheArticles(items);
     S.articles=items;
@@ -1054,8 +983,6 @@ async function loadArticles(){
     el.innerHTML=`<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load: ${esc(e.message)}</p></div>`;
   }
 }
-
-function chunkArray(arr,size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
 
 function visibleArticles(){
   if(S.filter==='unread') return S.articles.filter(a=>!S.readSet.has(a.id));
@@ -1100,7 +1027,7 @@ async function openArticle(idx, dir){
   updateReaderNav(idx,arts.length);
   if(!S.readSet.has(a.id)){
     S.readSet.add(a.id);
-    feverPost('mark',{id:a.id,as:'read',mark:'item'}).catch(()=>{});
+    apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
   }
   updateStarBtn();
 }
@@ -1154,7 +1081,7 @@ function updateStarBtn(){
 function toggleStar(){
   const a=S.curArticle; if(!a) return;
   const starred=S.starSet.has(a.id);
-  feverPost('mark',{id:a.id,as:starred?'unsaved':'saved',mark:'item'}).catch(()=>{});
+  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Starred ★'); }
   persistStarredArticles();
   updateStarBtn();
@@ -1162,7 +1089,7 @@ function toggleStar(){
 async function markReadCurrent(){
   const a=S.curArticle; if(!a) return;
   S.readSet.add(a.id);
-  await feverPost('mark',{id:a.id,as:'read',mark:'item'}).catch(()=>{});
+  await apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
   toast('Marked read');
 }
 function openOrig(){
@@ -1173,10 +1100,10 @@ function openOrig(){
 async function markAllRead(){
   if(!confirm('Mark all visible articles as read?')) return;
   try{
-    const arts=visibleArticles();
-    // Fever supports marking a feed or group as read; mark each item individually
-    await Promise.all(arts.map(a=>feverPost('mark',{id:a.id,as:'read',mark:'item'}).catch(()=>{})));
-    arts.forEach(a=>S.readSet.add(a.id));
+    const ts=Math.floor(Date.now()/1000);
+    const sid=S.currentCat==='__all__'?'user/-/state/com.google/reading-list':S.currentCat;
+    await apiPost('/reader/api/0/mark-all-as-read',{s:sid,ts});
+    S.articles.forEach(a=>S.readSet.add(a.id));
     renderArticleList(); toast('All marked read');
   }catch(e){ toast('Failed: '+e.message); }
 }
@@ -1264,16 +1191,12 @@ async function loadYoutubeMode(){
   catBar.innerHTML=h;
   grid.innerHTML=ytSkelHtml(6);
   try{
-    const feedMap=S._feverFeedMap||{};
-    const cat=S.cats.find(c=>c.id===S.currentCat);
-    let items=[];
-    if(cat&&cat.feeds.length){
-      const feedIds=cat.feeds.map(f=>f.id).join(',');
-      const data=await feverGet({items:'',feed_ids:feedIds});
-      items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-    }
-    items.forEach(a=>{ if(a._is_read) S.readSet.add(a.id); });
-    items.sort((a,b)=>(b.published||0)-(a.published||0));
+    const params={n:50,s:S.currentCat};
+    const data=await apiGet('/reader/api/0/stream/contents',params);
+    const items=data.items||[];
+    items.forEach(a=>{
+      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+    });
     cacheArticles(items);
     S.ytArticles=items;
     renderYtGrid();
@@ -1342,7 +1265,7 @@ function ytSearch(){
 function openYtArticle(idx){
   const a=S.ytArticles[idx]; if(!a) return;
   S.ytCurIdx=idx; S.ytCurArticle=a;
-  if(!S.readSet.has(a.id)){ S.readSet.add(a.id); feverPost('mark',{id:a.id,as:'read',mark:'item'}).catch(()=>{}); }
+  if(!S.readSet.has(a.id)){ S.readSet.add(a.id); apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
   renderYtReader(a);
   showScreen('yt-reader');
 }
@@ -1386,7 +1309,7 @@ function closeYtReader(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(
 function toggleYtStar(){
   const a=S.ytCurArticle; if(!a) return;
   const starred=S.starSet.has(a.id);
-  feverPost('mark',{id:a.id,as:starred?'unsaved':'saved',mark:'item'}).catch(()=>{});
+  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Saved ★'); }
   persistStarredArticles();
   renderYtReader(a);
@@ -1411,24 +1334,17 @@ async function loadShortsMode(){
   const gallery=document.getElementById('shorts-gallery');
   gallery.innerHTML='<div style="padding:60px 20px;text-align:center;color:#666">Loading…</div>';
   try{
-    const feedMap=S._feverFeedMap||{};
-    let items=[];
-    if(S.currentFeed){
-      const data=await feverGet({items:'',feed_ids:S.currentFeed});
-      items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-    } else {
-      const cat=S.cats.find(c=>c.id===S.currentCat);
-      if(cat&&cat.feeds.length){
-        const feedIds=cat.feeds.map(f=>f.id).join(',');
-        const data=await feverGet({items:'',feed_ids:feedIds});
-        items=(data.items||[]).map(i=>feverItemToArticle(i,feedMap));
-      }
-    }
+    const params={n:50};
+    let streamId=S.currentFeed||S.currentCat;
+    if(S.shortsFilter==='unread') params.xt='user/-/state/com.google/read';
+    else if(S.shortsFilter==='starred') streamId='user/-/state/com.google/starred';
+    params.s=streamId;
+    const data=await apiGet('/reader/api/0/stream/contents',params);
+    const items=data.items||[];
     items.forEach(a=>{
-      if(a._is_read) S.readSet.add(a.id);
-      if(a._is_saved) S.starSet.add(a.id);
+      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+      if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
     });
-    items.sort((a,b)=>(b.published||0)-(a.published||0));
     cacheArticles(items);
     S.shortsArticles=items;
     renderShortsGallery();
@@ -1672,7 +1588,7 @@ function observeShortsSlides(){
         const a=S.shortsArticles[idx];
         if(a&&!S.readSet.has(a.id)){
           S.readSet.add(a.id);
-          feverPost('mark',{id:a.id,as:'read',mark:'item'}).catch(()=>{});
+          apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
         }
       } else {
         window._shortsPlaying.delete(idx);
@@ -1692,7 +1608,7 @@ document.getElementById('shorts-slides').addEventListener('wheel',e=>{
 function toggleShortStar(i){
   const a=S.shortsArticles[i]; if(!a) return;
   const starred=S.starSet.has(a.id);
-  feverPost('mark',{id:a.id,as:starred?'unsaved':'saved',mark:'item'}).catch(()=>{});
+  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred) S.starSet.delete(a.id); else S.starSet.add(a.id);
   const action=document.querySelector(`#ss-${i} .short-action svg`);
   if(action){ action.setAttribute('fill',S.starSet.has(a.id)?'#f59e0b':'none'); action.setAttribute('stroke',S.starSet.has(a.id)?'#f59e0b':'white'); }
@@ -1771,7 +1687,7 @@ async function refreshAll(){
   const btn=document.getElementById('refresh-btn');
   if(btn){ const svg=btn.querySelector('svg'); if(svg) svg.classList.add('spin'); btn.disabled=true; }
   try{
-    await loadFeedsAndGroups();
+    await Promise.all([loadCategories(), loadUnreadCounts()]);
     const label=currentCatLabel();
     if(S.currentCat!=='__all__'&&isShortsMode(label)) await loadShortsMode();
     else if(S.currentCat!=='__all__'&&isYoutubeMode(label)) await loadYoutubeMode();
@@ -1787,7 +1703,7 @@ async function refreshAll(){
 // SETTINGS
 // ═══════════════════════════════════════════════════════════
 function openSettings(){
-  document.getElementById('settings-user').textContent=`${S.server}`;
+  document.getElementById('settings-user').textContent=`${S.user} @ ${S.server}`;
   document.getElementById('cache-days-sel').value=String(S.cacheDays);
   renderCatFilterList();
   renderHiddenChannelsList();
@@ -1879,7 +1795,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').cat
 window.addEventListener('online', async()=>{
   showOfflineBanner(false);
   toast('Back online — refreshing…');
-  if(S.apiKey){ try{ await loadFeedsAndGroups(); await loadArticles(); }catch(e){ showOfflineBanner(true); } }
+  if(S.auth){ try{ await Promise.all([loadCategories(), loadUnreadCounts()]); await loadArticles(); }catch(e){ showOfflineBanner(true); } }
 });
 window.addEventListener('offline',()=>{ showOfflineBanner(true); });
 if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
@@ -1892,18 +1808,16 @@ loadExcludedCats();
 loadHiddenChannels();
 (async function(){
   const srv=localStorage.getItem('fr_server');
-  const key=localStorage.getItem('fr_apikey');
-  const path=localStorage.getItem('fr_apipath')||'/api/fever.php';
-  if(srv&&key){
-    S.server=srv; S.apiKey=key; S.apiPath=path;
+  const auth=localStorage.getItem('fr_auth');
+  const user=localStorage.getItem('fr_user')||'';
+  if(srv&&auth){
+    S.server=srv; S.auth=auth; S.user=user;
     document.getElementById('srv').value=srv;
-    document.getElementById('feverkey').value=key;
-    document.getElementById('feverpath').value=path;
     try{
       await loadApp();
     }catch(e){
       const msg=(e.message||'').toLowerCase();
-      const isAuthError=msg.includes('auth')||msg.includes('401')||msg.includes('403');
+      const isAuthError=msg.includes('401')||msg.includes('403')||msg.includes('invalid')||msg.includes('unauthorized');
       if(isAuthError){ clearSession(); showScreen('login-screen'); }
       else {
         showScreen('app-screen');
