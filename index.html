@@ -502,7 +502,6 @@
       <button class="filter-btn active" id="yf-all" onclick="setYtFilter('all')" style="color:#aaa;border-color:#444">All</button>
       <button class="filter-btn" id="yf-unread" onclick="setYtFilter('unread')" style="color:#aaa;border-color:#444">Unread</button>
       <button class="filter-btn" id="yf-starred" onclick="setYtFilter('starred')" style="color:#aaa;border-color:#444">Starred</button>
-      <button class="filter-btn" id="yf-hidden" onclick="setYtFilter('hidden')" style="color:#aaa;border-color:#444">Hidden</button>
     </div>
   </div>
   <div class="article-list" style="background:#0f0f0f"><div class="yt-grid" id="yt-grid"></div></div>
@@ -516,9 +515,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </button>
     <div class="reader-topbar-feed" id="yt-reader-ch" style="color:#aaa"></div>
-    <button class="icon-btn" id="yt-hide-btn" onclick="toggleYtAuthorHide()" style="color:#aaa" title="Hide channel from main feed">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-    </button>
     <button class="icon-btn" id="yt-star-btn" onclick="toggleYtStar()" style="color:#aaa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </button>
@@ -552,7 +548,6 @@
       <button class="filter-btn active" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
       <button class="filter-btn" id="sf-unread" onclick="setShortsFilter('unread')" style="color:#aaa;border-color:#333">Unread</button>
       <button class="filter-btn" id="sf-starred" onclick="setShortsFilter('starred')" style="color:#aaa;border-color:#333">Starred</button>
-      <button class="filter-btn" id="sf-hidden" onclick="setShortsFilter('hidden')" style="color:#aaa;border-color:#333">Hidden</button>
     </div>
   </div>
   <!-- Gallery grid (shown by default) -->
@@ -623,7 +618,6 @@ const S = {
   shortsArticles:[], shortsFilter:'all', shortsPlayerIdx:0,
   unreadMap:{},
   cacheDays:7,
-  hiddenAuthors:new Set(),
 };
 // Category label keywords that trigger special modes
 const SHORTS_KEYWORDS = ['shorts','tiktok','short'];
@@ -675,28 +669,6 @@ function loadStarredArticles(){
     const d=localStorage.getItem(STAR_CACHE_KEY);
     if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
   }catch(e){}
-}
-
-// ── HIDDEN AUTHORS (hide channels from YT/Shorts all+unread feeds) ──
-const HIDDEN_AUTHORS_KEY='fr_hidden_authors';
-function loadHiddenAuthors(){
-  try{ const d=localStorage.getItem(HIDDEN_AUTHORS_KEY); if(d) JSON.parse(d).forEach(a=>S.hiddenAuthors.add(a)); }catch(e){}
-}
-function saveHiddenAuthors(){
-  try{ localStorage.setItem(HIDDEN_AUTHORS_KEY,JSON.stringify([...S.hiddenAuthors])); }catch(e){}
-}
-function getArticleAuthor(a){
-  return a.origin?.title||a.author||'';
-}
-function isAuthorHidden(a){
-  const author=getArticleAuthor(a);
-  return author&&S.hiddenAuthors.has(author);
-}
-function toggleHideAuthor(author){
-  if(!author) return;
-  if(S.hiddenAuthors.has(author)){ S.hiddenAuthors.delete(author); toast(author+' removed from hidden'); }
-  else{ S.hiddenAuthors.add(author); toast(author+' hidden from main feed'); }
-  saveHiddenAuthors();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -775,7 +747,6 @@ async function loadApp(){
   showScreen('app-screen');
   loadPersistedArticles();
   loadStarredArticles();
-  loadHiddenAuthors();
 
   const online = navigator.onLine;
 
@@ -913,9 +884,6 @@ function stopAllMedia(){
 function selectCat(id){
   stopAllMedia(); // always kill media before switching category
   S.currentCat=id; S.currentFeed=null;
-  // Default to unread whenever switching categories
-  S.filter='unread';
-  ['all','unread','starred'].forEach(x=>{ const el=document.getElementById('f-'+x); if(el) el.classList.toggle('active',x==='unread'); });
   renderCatTabs(); renderFeedBar();
   const label=currentCatLabel();
   if(id!=='__all__' && isShortsMode(label)){ loadShortsMode(); return; }
@@ -1174,9 +1142,6 @@ async function markAllRead(){
 // ═══════════════════════════════════════════════════════════
 async function loadYoutubeMode(){
   stopAllMedia();
-  // Default to unread filter when entering YT mode
-  S.ytFilter='unread';
-  ['all','unread','starred','hidden'].forEach(x=>{ const el=document.getElementById('yf-'+x); if(el){ el.classList.toggle('active',x==='unread'); el.style.color=x==='unread'?'var(--accent)':'#aaa'; } });
   showScreen('yt-screen');
   const label=currentCatLabel()||'YouTube';
   const titleEl=document.getElementById('yt-screen-title');
@@ -1207,7 +1172,7 @@ async function loadYoutubeMode(){
 }
 function setYtFilter(f){
   S.ytFilter=f;
-  ['all','unread','starred','hidden'].forEach(x=>{
+  ['all','unread','starred'].forEach(x=>{
     const btn=document.getElementById('yf-'+x);
     if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; }
   });
@@ -1216,13 +1181,8 @@ function setYtFilter(f){
 function renderYtGrid(){
   const grid=document.getElementById('yt-grid');
   let arts=S.ytArticles;
-  if(S.ytFilter==='hidden'){
-    arts=arts.filter(a=>isAuthorHidden(a));
-  } else {
-    arts=arts.filter(a=>!isAuthorHidden(a));
-    if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
-    else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
-  }
+  if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
+  else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
   if(!arts.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No videos</p></div>'; return; }
   grid.innerHTML=arts.map((a)=>{
     const trueIdx=S.ytArticles.indexOf(a);
@@ -1266,7 +1226,6 @@ function openYtArticle(idx){
   S.ytCurIdx=idx; S.ytCurArticle=a;
   if(!S.readSet.has(a.id)){ S.readSet.add(a.id); apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
   renderYtReader(a);
-  updateYtHideBtn();
   showScreen('yt-reader');
 }
 function renderYtReader(a){
@@ -1314,22 +1273,6 @@ function toggleYtStar(){
   persistStarredArticles();
   renderYtReader(a);
 }
-function toggleYtAuthorHide(){
-  const a=S.ytCurArticle; if(!a) return;
-  const author=getArticleAuthor(a);
-  if(!author) return;
-  toggleHideAuthor(author);
-  updateYtHideBtn();
-  renderYtGrid();
-}
-function updateYtHideBtn(){
-  const btn=document.getElementById('yt-hide-btn'); if(!btn) return;
-  const a=S.ytCurArticle; if(!a) return;
-  const author=getArticleAuthor(a);
-  const hidden=S.hiddenAuthors.has(author);
-  btn.style.color=hidden?'#f59e0b':'#aaa';
-  btn.title=hidden?'Unhide channel from main feed':'Hide channel from main feed';
-}
 function launchYt(id, posterId){
   const poster=document.getElementById(posterId); if(!poster) return;
   const ratio=poster.querySelector('.yt-player-ratio,.vid-ratio');
@@ -1344,9 +1287,6 @@ function launchYt(id, posterId){
 // ═══════════════════════════════════════════════════════════
 async function loadShortsMode(){
   stopAllMedia(); // kill any playing audio/video before switching
-  // Default to unread filter when entering Shorts mode
-  S.shortsFilter='unread';
-  ['all','unread','starred','hidden'].forEach(x=>{ const el=document.getElementById('sf-'+x); if(el) el.classList.toggle('active',x==='unread'); });
   showScreen('shorts-screen');
   document.getElementById('shorts-title').textContent=currentCatLabel()||'Shorts';
   renderShortsCatBar();
@@ -1367,12 +1307,7 @@ async function loadShortsMode(){
     });
     cacheArticles(items);
     S.shortsArticles=items;
-    // Apply hidden filter: hidden tab shows only hidden authors, others exclude them
-    if(S.shortsFilter==='hidden'){
-      renderShortsGallery(S.shortsArticles.filter(a=>isAuthorHidden(a)));
-    } else {
-      renderShortsGallery(S.shortsArticles.filter(a=>!isAuthorHidden(a)));
-    }
+    renderShortsGallery();
   }catch(e){ gallery.innerHTML=`<div style="padding:60px 20px;text-align:center;color:#666">${esc(e.message)}</div>`; }
 }
 
@@ -1411,26 +1346,21 @@ function selectShortsFeed(id){ S.currentFeed=id; loadShortsMode(); }
 function selectShortsFeedByIdx(i){ const f=window._feedBarFeeds&&window._feedBarFeeds[i]; if(f) selectShortsFeed(f.id); }
 function setShortsFilter(f){
   S.shortsFilter=f;
-  ['all','unread','starred','hidden'].forEach(x=>{
+  ['all','unread','starred'].forEach(x=>{
     const btn=document.getElementById('sf-'+x);
     if(btn) btn.classList.toggle('active',x===f);
   });
   loadShortsMode();
 }
 
-function renderShortsGallery(arts){
-  if(!arts) arts = S.shortsFilter==='hidden'
-    ? S.shortsArticles.filter(a=>isAuthorHidden(a))
-    : S.shortsArticles.filter(a=>!isAuthorHidden(a));
-  // Store the currently displayed list for the player to use
-  window._shortsDisplayed = arts;
+function renderShortsGallery(){
   const gallery=document.getElementById('shorts-gallery');
-  gallery.innerHTML=arts.map((a,i)=>{
+  gallery.innerHTML=S.shortsArticles.map((a,i)=>{
     const raw=a.summary?.content||a.content?.content||'';
     const thumb=getShortThumb(a,raw);
     const read=S.readSet.has(a.id);
     return `<div class="shorts-gallery-card" onclick="openShortsPlayer(${i})">
-      ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.background='#222';this.style.display='none'"/>`:'<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:#444;font-size:1.5rem">▶</div>'}
+      ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.style.background='#222';this.style.display='none'"/>`:'<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:#444;font-size:1.5rem">▶</div>'}
       <div class="play-badge">▶</div>
       ${!read?'<div class="unread-pip"></div>':''}
     </div>`;
@@ -1480,13 +1410,11 @@ function closeShortsPlayer(){
 
 function renderShortsSlides(startIdx){
   const slides=document.getElementById('shorts-slides');
-  const arts=window._shortsDisplayed||S.shortsArticles;
-  slides.innerHTML=arts.map((a,i)=>{
+  slides.innerHTML=S.shortsArticles.map((a,i)=>{
     const raw=a.summary?.content||a.content?.content||'';
     const title=a.title||'';
     const author=a.author||a.origin?.title||'';
     const starred=S.starSet.has(a.id);
-    const hidden=isAuthorHidden(a);
     return `<div class="short-slide" id="ss-${i}" data-idx="${i}">
       ${buildSlideMedia(a,raw,i)}
       <div class="short-overlay">
@@ -1497,10 +1425,6 @@ function renderShortsSlides(startIdx){
         <div class="short-action" onclick="toggleShortStar(${i})">
           <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'white'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span>${starred?'Saved':'Save'}</span>
-        </div>
-        <div class="short-action" id="short-hide-${i}" onclick="toggleShortAuthorHide(${i})" title="${hidden?'Unhide channel':'Hide channel from main feed'}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="${hidden?'#f59e0b':'white'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          <span style="color:${hidden?'#f59e0b':'#fff'}">${hidden?'Unhide':'Hide'}</span>
         </div>
       </div>
     </div>`;
@@ -1635,8 +1559,7 @@ function pauseSlideAt(idx){
     setTimeout(()=>{ try{f.remove();}catch(e){} }, 50);
   });
   // Restore poster if it was a YT slide
-  const arts=window._shortsDisplayed||S.shortsArticles;
-  const a=arts[idx];
+  const a=S.shortsArticles[idx];
   if(a){
     const raw=a.summary?.content||a.content?.content||'';
     const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
@@ -1668,14 +1591,13 @@ function observeShortsSlides(){
       const idx=parseInt(e.target.dataset.idx);
       if(e.isIntersecting){
         S.shortsPlayerIdx=idx;
-        const arts=window._shortsDisplayed||S.shortsArticles;
         const titleEl=document.getElementById('shorts-player-title');
-        if(titleEl) titleEl.textContent=arts[idx]?.title||'';
+        if(titleEl) titleEl.textContent=S.shortsArticles[idx]?.title||'';
         if(!window._shortsPlaying.has(idx)){
           window._shortsPlaying.add(idx);
           playSlideAt(idx);
         }
-        const a=arts[idx];
+        const a=S.shortsArticles[idx];
         if(a&&!S.readSet.has(a.id)){
           S.readSet.add(a.id);
           apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
@@ -1697,8 +1619,7 @@ document.getElementById('shorts-slides').addEventListener('wheel',e=>{
 },{passive:false});
 
 function toggleShortStar(i){
-  const arts=window._shortsDisplayed||S.shortsArticles;
-  const a=arts[i]; if(!a) return;
+  const a=S.shortsArticles[i]; if(!a) return;
   const starred=S.starSet.has(a.id);
   apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
   if(starred) S.starSet.delete(a.id); else S.starSet.add(a.id);
@@ -1711,24 +1632,6 @@ function toggleShortStar(i){
   const span=document.querySelector(`#ss-${i} .short-action span`);
   if(span) span.textContent=S.starSet.has(a.id)?'Saved':'Save';
   toast(starred?'Unstarred':'Saved ★');
-}
-
-function toggleShortAuthorHide(i){
-  const arts=window._shortsDisplayed||S.shortsArticles;
-  const a=arts[i]; if(!a) return;
-  const author=getArticleAuthor(a);
-  if(!author) return;
-  toggleHideAuthor(author);
-  // Update the hide button in this slide
-  const btn=document.getElementById('short-hide-'+i);
-  if(btn){
-    const hidden=S.hiddenAuthors.has(author);
-    const svg=btn.querySelector('svg');
-    if(svg) svg.setAttribute('stroke',hidden?'#f59e0b':'white');
-    const span=btn.querySelector('span');
-    if(span){ span.textContent=hidden?'Unhide':'Hide'; span.style.color=hidden?'#f59e0b':'#fff'; }
-    btn.title=hidden?'Unhide channel':'Hide channel from main feed';
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2048,7 +1951,7 @@ loadCacheDays();
       else {
         // Network down or server unreachable — show cached data instead
         showScreen('app-screen');
-        loadPersistedArticles(); loadStarredArticles(); loadHiddenAuthors();
+        loadPersistedArticles(); loadStarredArticles();
         showOfflineBanner(true);
         renderFromCache();
       }
