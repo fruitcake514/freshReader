@@ -75,7 +75,7 @@
     .field label{display:block;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:5px}
     .field input{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:1rem;outline:none;transition:border-color .15s}
     .field input:focus{border-color:var(--accent)}
-    .btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:1rem;font-weight:600;margin-top:6px;transition:opacity .15s,transform .1s}
+    .btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:1rem;font-weight:600;margin-top:6px;transition:opacity .15s,transform .1s; cursor:pointer;}
     .btn-primary:active{transform:scale(.98)}
     .btn-primary:disabled{opacity:.6;cursor:not-allowed}
     .login-err{margin-top:10px;padding:9px 13px;background:#fee2e2;color:#991b1b;border-radius:var(--radius-sm);font-size:.85rem;display:none}
@@ -281,64 +281,6 @@
     .yt-hide-btn{background:rgba(255,255,255,.08);border:1px solid #444;color:#aaa;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:4px;margin-top:5px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
     .yt-hide-btn:hover{background:rgba(255,80,80,.2);border-color:#f87171;color:#f87171}
 
-    /* YT Reader */
-    #yt-reader{background:#0f0f0f;color:#fff;height:100dvh;max-height:100dvh}
-    #yt-reader .sb{background:#0f0f0f;flex-shrink:0}
-    #yt-reader .reader-topbar{background:rgba(15,15,15,.95);border-color:#272727;flex-shrink:0}
-    #yt-reader-body-wrap{
-      flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-      display:flex;flex-direction:column;
-    }
-    .yt-player-wrap{background:#000;width:100%;flex-shrink:0}
-    .yt-player-ratio{
-      position:relative;
-      padding-top:min(56.25%, 40vh);
-    }
-    .yt-player-ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
-    .yt-player-poster{position:relative;cursor:pointer}
-    .yt-video-info{padding:14px 16px;flex:1}
-    .yt-video-title{font-size:1.05rem;font-weight:700;line-height:1.3;color:#fff;margin-bottom:6px}
-    .yt-video-meta{font-size:.8rem;color:#aaa;margin-bottom:10px}
-    .yt-video-desc{font-size:.85rem;color:#ccc;line-height:1.55;white-space:pre-wrap}
-    .yt-actions{display:flex;gap:0;border-top:1px solid #272727;border-bottom:1px solid #272727;margin:8px 0}
-    .yt-action-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;font-size:.72rem;color:#aaa;transition:color .15s}
-    .yt-action-btn:hover{color:#fff}
-    .yt-action-btn svg{width:22px;height:22px}
-
-    /* ══ SHORTS SCREEN (gallery + fullscreen player) ═══════ */
-    #shorts-screen{background:#111;color:#fff}
-    #shorts-screen .sb{display:none}
-    .shorts-gallery{
-      padding-bottom:calc(16px + var(--safe-bottom));
-      display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
-    }
-    @media(max-width:500px){.shorts-gallery{grid-template-columns:1fr;gap:1px}}
-    .shorts-gallery-card{position:relative;cursor:pointer;overflow:hidden;aspect-ratio:9/16;background:#000}
-    .shorts-gallery-card img{width:100%;height:100%;object-fit:cover;display:block}
-    .shorts-gallery-card .play-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;font-weight:700;padding:2px 4px;border-radius:3px}
-    .shorts-gallery-card .unread-pip{position:absolute;top:5px;right:5px;width:7px;height:7px;background:#f87171;border-radius:50%}
-    .shorts-player{display:none;position:fixed;inset:0;z-index:100;background:#000;flex-direction:column}
-    .shorts-player.open{display:flex}
-    .shorts-player-topbar{
-      position:absolute;top:0;left:0;right:0;
-      height:calc(var(--nav-h) + var(--safe-top));padding-top:var(--safe-top);
-      display:flex;align-items:center;gap:6px;padding-left:8px;padding-right:8px;
-      background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);z-index:10;
-    }
-    .shorts-player-topbar .topbar-title{color:#fff;font-size:1rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .shorts-slides{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-ms-overflow-style:none}
-    .shorts-slides::-webkit-scrollbar{display:none}
-    .short-slide{height:100dvh;scroll-snap-align:start;position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
-    .short-slide video{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
-    .short-slide iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
-    .short-overlay{position:absolute;bottom:calc(72px + var(--safe-bottom));left:0;right:58px;padding:0 14px;pointer-events:none;z-index:5}
-    .short-title{font-size:.9rem;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-    .short-author{font-size:.8rem;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.7)}
-    .short-actions{position:absolute;right:10px;bottom:calc(82px + var(--safe-bottom));display:flex;flex-direction:column;gap:18px;align-items:center;z-index:5}
-    .short-action{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
-    .short-action svg{width:26px;height:26px;color:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))}
-    .short-action span{font-size:.65rem;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.7)}
-
     /* ── SETTINGS PANEL ── */
     .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
     .settings-overlay.open{display:flex}
@@ -370,1464 +312,584 @@
     .hidden-ch-list{width:100%;display:flex;flex-direction:column;gap:5px}
     .hidden-ch-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg2);border-radius:var(--radius-sm);font-size:.83rem}
     .hidden-ch-item button{font-size:.72rem;color:var(--accent);font-weight:700;padding:3px 8px;border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:4px}
-
-    /* landscape block */
-    @media(orientation:landscape) and (max-height:500px){
-      body::before{content:'Rotate to portrait';position:fixed;inset:0;z-index:9999;background:var(--bg);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:1rem}
-    }
   </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══════════════════════════════ -->
 <div id="login-screen" class="screen active">
   <div class="login-card">
     <div class="login-logo">
       <h1>FreshReader</h1>
-      <p>Your RSS, beautifully read</p>
+      <p>Your RSS Reader</p>
     </div>
-    <div class="field"><label>FreshRSS URL</label><input id="srv" type="url" placeholder="https://rss.yourdomain.com" autocomplete="url"/></div>
-    <div class="field"><label>Username</label><input id="usr" type="text" placeholder="admin" autocomplete="username"/></div>
-    <div class="field" style="margin-bottom:0"><label>Password</label><input id="pwd" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
-    <div class="login-err" id="login-err"></div>
+    <div class="field">
+      <label>Server URL</label>
+      <input id="srv" type="url" placeholder="https://rss.example.com" />
+    </div>
+    <div class="field">
+      <label>Username</label>
+      <input id="usr" type="text" />
+    </div>
+    <div class="field">
+      <label>App Password</label>
+      <input id="pwd" type="password" />
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="login()">Login</button>
+    <div id="login-err" class="login-err"></div>
   </div>
 </div>
 
-<!-- ══ APP (normal articles) ══════════════ -->
 <div id="app-screen" class="screen">
   <div class="sb"></div>
   <div class="topbar">
-    <div class="topbar-title" id="app-title">FreshReader</div>
-    <button class="icon-btn" onclick="refreshAll()" id="refresh-btn" title="Refresh">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-    </button>
-    <button class="icon-btn" onclick="openSettings()" title="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
-    <button class="icon-btn" onclick="doLogout()" title="Logout">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
+    <div class="topbar-title">FreshReader</div>
+    <button class="icon-btn" onclick="openSettings()">⚙️</button>
   </div>
+  
   <div class="cat-bar" id="cat-bar"></div>
-  <div class="feed-bar hidden" id="feed-bar"></div>
+  <div class="feed-bar" id="feed-bar"></div>
+
   <div class="filter-bar">
     <div class="filter-pills">
-      <button class="filter-btn active" id="f-all" onclick="setFilter('all')">All</button>
-      <button class="filter-btn" id="f-unread" onclick="setFilter('unread')">Unread</button>
-      <button class="filter-btn" id="f-starred" onclick="setFilter('starred')">Starred</button>
+      <button class="filter-btn active" id="filter-unread" onclick="setFilter('unread')">Unread</button>
+      <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" id="filter-starred" onclick="setFilter('starred')">Starred</button>
     </div>
     <button class="mark-all-btn" onclick="markAllRead()">Mark all read</button>
   </div>
-  <div class="article-list"><div id="list-content"></div></div>
+
+  <div class="article-list" id="list-content"></div>
 </div>
 
-<!-- ══ READER ══════════════════════════════ -->
-<div id="reader-screen" class="screen">
-  <div class="sb"></div>
-  <div class="reader-topbar">
-    <button class="icon-btn" onclick="closeReader()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
-    <div class="reader-topbar-feed" id="reader-feed-lbl"></div>
-    <span class="reader-counter" id="reader-ctr"></span>
-    <button class="icon-btn" id="star-btn" onclick="toggleStar()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    </button>
-  </div>
-  <button class="swipe-hint l" id="sh-l" onclick="navigateArticle(-1)" aria-label="Previous article">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-  </button>
-  <button class="swipe-hint r" id="sh-r" onclick="navigateArticle(1)" aria-label="Next article">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </button>
-  <div class="reader-swipe" id="reader-swipe"><div class="reader-body" id="reader-body"></div></div>
-  <div class="reader-actions">
-    <button class="action-btn" onclick="markReadCurrent()" id="mark-read-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mark read
-    </button>
-    <button class="action-btn" onclick="openOrig()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Original
-    </button>
-  </div>
-</div>
-
-<!-- ══ YOUTUBE CATEGORY ════════════════════ -->
 <div id="yt-screen" class="screen">
-  <div class="sb" style="background:#0f0f0f"></div>
-  <div class="topbar" style="background:rgba(15,15,15,.95);border-color:#272727">
-    <button class="icon-btn" onclick="selectCat('__all__')" style="color:#aaa" title="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
-    <div class="topbar-title" style="color:#fff" id="yt-screen-title">▶ YouTube</div>
-    <button class="icon-btn" onclick="refreshAll()" style="color:#aaa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-    </button>
-    <button class="icon-btn" onclick="openSettings()" style="color:#aaa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
-    <button class="icon-btn" onclick="doLogout()" style="color:#aaa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
+  <div class="sb"></div>
+  <div class="topbar">
+    <div class="topbar-title">YouTube Subscriptions</div>
+    <button class="icon-btn" onclick="showScreen('app-screen')">🔙</button>
   </div>
-  <div class="cat-bar" id="yt-cat-bar" style="background:#0f0f0f;border-color:#272727"></div>
-  <div style="padding:8px 12px;background:#0f0f0f;border-bottom:1px solid #272727;display:flex;gap:8px">
-    <input id="yt-search-input" type="search" placeholder="Paste a YouTube URL to watch in-app, or type to search…"
-      style="flex:1;padding:8px 12px;border-radius:20px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:.85rem;outline:none"
-      onkeydown="if(event.key==='Enter') ytSearch()"/>
-    <button onclick="ytSearch()" style="padding:8px 14px;background:#c00;color:#fff;border-radius:20px;font-size:.8rem;font-weight:700;flex-shrink:0">Go</button>
-  </div>
-  <div class="filter-bar" style="background:#0f0f0f;border-color:#272727">
+  
+  <div class="cat-bar" id="yt-cat-bar"></div>
+  <div class="feed-bar" id="yt-feed-bar"></div>
+
+  <div class="filter-bar">
     <div class="filter-pills">
-      <button class="filter-btn active" id="yf-all" onclick="setYtFilter('all')" style="color:#aaa;border-color:#444">All</button>
-      <button class="filter-btn" id="yf-unread" onclick="setYtFilter('unread')" style="color:#aaa;border-color:#444">Unread</button>
-      <button class="filter-btn" id="yf-starred" onclick="setYtFilter('starred')" style="color:#aaa;border-color:#444">Starred</button>
-      <button class="filter-btn" id="yf-hidden" onclick="setYtFilter('hidden')" style="color:#aaa;border-color:#444">Hidden</button>
+      <button class="filter-btn active" id="yt-filter-unread" onclick="setFilter('unread')">Unread</button>
+      <button class="filter-btn" id="yt-filter-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" id="yt-filter-starred" onclick="setFilter('starred')">Starred</button>
     </div>
+    <button class="mark-all-btn" onclick="markAllRead()">Mark all read</button>
   </div>
-  <div class="article-list" style="background:#0f0f0f"><div class="yt-grid" id="yt-grid"></div></div>
+
+  <div class="yt-grid" id="yt-list-content"></div>
 </div>
 
-<!-- ══ YOUTUBE READER ══════════════════════ -->
-<div id="yt-reader" class="screen">
-  <div class="sb" style="background:#0f0f0f"></div>
-  <div class="reader-topbar" style="background:rgba(15,15,15,.95);border-color:#272727">
-    <button class="icon-btn" onclick="closeYtReader()" style="color:#aaa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
-    <div class="reader-topbar-feed" id="yt-reader-ch" style="color:#aaa"></div>
-    <button class="icon-btn" id="yt-star-btn" onclick="toggleYtStar()" style="color:#aaa">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    </button>
-  </div>
-  <div id="yt-reader-body-wrap">
-    <div id="yt-reader-body"></div>
-    <div style="height:calc(16px + var(--safe-bottom))"></div>
-  </div>
-</div>
-
-<!-- ══ SHORTS / TIKTOK SCREEN ══════════════ -->
-<div id="shorts-screen" class="screen">
-  <div class="topbar" style="background:rgba(0,0,0,.85);border-bottom:1px solid #222;position:fixed;top:var(--safe-top);left:0;right:0;z-index:50">
-    <button class="icon-btn" onclick="exitShortsMode()" style="color:#fff" title="Back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
-    <div class="topbar-title" style="color:#fff" id="shorts-title">Shorts</div>
-    <button class="icon-btn" onclick="refreshAll()" style="color:#fff">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-    </button>
-    <button class="icon-btn" onclick="openSettings()" style="color:#fff">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
-  </div>
-  <div class="cat-bar" id="shorts-cat-bar" style="background:#111;border-color:#333;margin-top:calc(var(--safe-top) + var(--nav-h))"></div>
-  <div class="feed-bar hidden" id="shorts-feed-bar" style="background:#1a1a1a;border-color:#333"></div>
-  <div class="filter-bar" style="background:#111;border-color:#333">
-    <div class="filter-pills">
-      <button class="filter-btn active" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
-      <button class="filter-btn" id="sf-unread" onclick="setShortsFilter('unread')" style="color:#aaa;border-color:#333">Unread</button>
-      <button class="filter-btn" id="sf-starred" onclick="setShortsFilter('starred')" style="color:#aaa;border-color:#333">Starred</button>
-      <button class="filter-btn" id="sf-hidden" onclick="setShortsFilter('hidden')" style="color:#aaa;border-color:#333">Hidden</button>
-    </div>
-  </div>
-  <div style="background:#111;flex:1;overflow-y:auto">
-    <div class="shorts-gallery" id="shorts-gallery"></div>
-  </div>
-  <div class="shorts-player" id="shorts-player">
-    <div class="shorts-player-topbar">
-      <button class="icon-btn" onclick="closeShortsPlayer()" style="color:#fff">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      </button>
-      <div class="topbar-title" id="shorts-player-title" style="color:#fff"></div>
-    </div>
-    <div class="shorts-slides" id="shorts-slides"></div>
-  </div>
-</div>
-
-<!-- ══ SETTINGS ════════════════════════════ -->
-<div class="settings-overlay" id="settings-overlay" onclick="closeSettingsOutside(event)">
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this) closeSettings()">
   <div class="settings-panel">
     <div class="settings-handle"></div>
     <div class="settings-title">Settings</div>
-
-    <div class="settings-section-title">Feed Display</div>
-    <div class="setting-row col">
-      <div><div class="setting-label">Categories in "All" feed</div><div class="setting-sub">Uncheck categories to hide them from the main All feed. They still appear when browsing directly.</div></div>
-      <div class="cat-checkbox-list" id="cat-filter-list"></div>
+    <div class="setting-row">
+      <span>Logout</span>
+      <button class="setting-btn danger" onclick="clearSession()">Logout</button>
     </div>
 
-    <div class="settings-section-title">YouTube / Shorts</div>
-    <div class="setting-row col">
-      <div><div class="setting-label">Hidden channels</div><div class="setting-sub">Articles from these channels are moved to the "Hidden" filter in YouTube &amp; Shorts views. Affects past and future articles.</div></div>
-      <div class="hidden-ch-list" id="hidden-ch-list"></div>
-    </div>
-
-    <div class="settings-section-title">Cache</div>
-    <div class="setting-row">
-      <div><div class="setting-label">Auto-delete cached articles</div><div class="setting-sub">Remove articles older than this many days</div></div>
-      <select class="setting-select" id="cache-days-sel" onchange="saveCacheDays()">
-        <option value="0">Never</option>
-        <option value="3">3 days</option>
-        <option value="7">7 days</option>
-        <option value="14">14 days</option>
-        <option value="30">30 days</option>
-        <option value="60">60 days</option>
-      </select>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Clear article cache</div><div class="setting-sub">Delete cached articles and re-fetch from server</div></div>
-      <button class="setting-btn danger" onclick="clearArticleCache()">Clear cache</button>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Clear app data</div><div class="setting-sub">Clear all caches and service worker, then reload</div></div>
-      <button class="setting-btn danger" onclick="clearAllAndReload()">Reset app</button>
-    </div>
-
-    <div class="settings-section-title">Account</div>
-    <div class="setting-row">
-      <div><div class="setting-label">Connected to</div><div class="setting-sub" id="settings-user">—</div></div>
-      <button class="setting-btn" onclick="doLogout()">Log out</button>
-    </div>
+    <div class="settings-section-title">Hidden Channels</div>
+    <div class="hidden-ch-list" id="hidden-ch-list"></div>
   </div>
 </div>
 
-<!-- ══ TOAST ════════════════════════════════ -->
-<div class="toast" id="toast"></div>
+<div id="toast" class="toast"></div>
 
 <script>
-'use strict';
-// ═══════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════
-const S = {
-  server:'', auth:'', user:'',
-  cats:[], feeds:[],
-  articles:[],
-  cachedArticles:{},
-  currentCat:'__all__', currentFeed:null,
-  filter:'all',
-  readSet:new Set(), starSet:new Set(),
-  curIdx:-1, curArticle:null,
-  ytArticles:[], ytFilter:'all', ytCurIdx:-1, ytCurArticle:null,
-  shortsArticles:[], shortsFilter:'all', shortsPlayerIdx:0,
-  unreadMap:{},
-  cacheDays:7,
-  // category IDs to exclude from All feed (user-configured)
-  excludedCatIds: new Set(),
-  // hidden YouTube channels: Set of channel name strings (normalised lowercase)
-  hiddenChannels: new Set(),
-};
+  // Global Application State
+  const S = {
+    server: '',
+    auth: '',
+    user: '',
+    cats: [],
+    articles: [],
+    currentCat: null,
+    currentFeed: null,
+    filter: 'unread',       // DEFAULT TO UNREAD
+    shortsFilter: 'unread', // DEFAULT TO UNREAD
+    readSet: new Set(),
+    starSet: new Set(),
+    excludedCatIds: new Set(),
+    hiddenChannels: new Set(),
+    continuation: null      // PAGINATION TOKEN
+  };
 
-const SHORTS_KEYWORDS = ['shorts','tiktok','short'];
-const YOUTUBE_KEYWORDS = ['youtube','yt','videos'];
-function isShortsMode(label){ return SHORTS_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
-function isYoutubeMode(label){ return YOUTUBE_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
-function currentCatLabel(){
-  const c = S.cats.find(c=>c.id===S.currentCat);
-  return c?c.label:'';
-}
+  const DB_KEY = 'fr_articles';
+  const STAR_CACHE_KEY = 'fr_starred';
 
-// ═══════════════════════════════════════════════════════════
-// STORAGE / SESSION
-// ═══════════════════════════════════════════════════════════
-const DB_KEY='fr_cache';
-const STAR_CACHE_KEY='fr_starred_articles';
-
-function saveSession(){
-  localStorage.setItem('fr_server', S.server);
-  localStorage.setItem('fr_auth', S.auth);
-  localStorage.setItem('fr_user', S.user);
-}
-function clearSession(){
-  ['fr_server','fr_auth','fr_user'].forEach(k=>localStorage.removeItem(k));
-}
-function loadCacheDays(){ S.cacheDays=parseInt(localStorage.getItem('fr_cache_days')||'7'); }
-function saveCacheDays(){ const v=document.getElementById('cache-days-sel').value; S.cacheDays=parseInt(v); localStorage.setItem('fr_cache_days',v); toast('Auto-delete set'); }
-
-function loadExcludedCats(){
-  try{
-    const raw=localStorage.getItem('fr_excluded_cats');
-    S.excludedCatIds=raw?new Set(JSON.parse(raw)):new Set();
-  }catch(e){ S.excludedCatIds=new Set(); }
-}
-function saveExcludedCats(){
-  localStorage.setItem('fr_excluded_cats', JSON.stringify([...S.excludedCatIds]));
-}
-
-function loadHiddenChannels(){
-  try{
-    const raw=localStorage.getItem('fr_hidden_channels');
-    S.hiddenChannels=raw?new Set(JSON.parse(raw)):new Set();
-  }catch(e){ S.hiddenChannels=new Set(); }
-}
-function saveHiddenChannels(){
-  localStorage.setItem('fr_hidden_channels', JSON.stringify([...S.hiddenChannels]));
-}
-function channelKey(name){ return (name||'').trim().toLowerCase(); }
-function isChannelHidden(a){
-  const ch=channelKey(a.origin?.title||a.author||'');
-  return ch && S.hiddenChannels.has(ch);
-}
-function hideChannel(name){
-  const key=channelKey(name);
-  if(!key) return;
-  S.hiddenChannels.add(key);
-  saveHiddenChannels();
-  toast('Channel hidden — use "Hidden" filter to see it');
-  renderYtGrid();
-  renderHiddenChannelsList();
-}
-function unhideChannel(key){
-  S.hiddenChannels.delete(key);
-  saveHiddenChannels();
-  toast('Channel restored');
-  renderYtGrid();
-  renderHiddenChannelsList();
-}
-
-function loadPersistedArticles(){
-  try{ const d=localStorage.getItem(DB_KEY); if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); } }catch(e){}
-}
-function persistArticles(){
-  pruneByDate();
-  try{ localStorage.setItem(DB_KEY,JSON.stringify(S.cachedArticles)); }catch(e){ console.warn('Cache persist failed',e); }
-}
-function pruneByDate(){
-  if(!S.cacheDays) return;
-  const cutoff=Date.now()/1000 - S.cacheDays*86400;
-  for(const id in S.cachedArticles){
-    const a=S.cachedArticles[id];
-    if(a.published && a.published < cutoff) delete S.cachedArticles[id];
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-}
-function cacheArticles(items){
-  items.forEach(a=>{ S.cachedArticles[a.id]=a; });
-  persistArticles();
-  persistStarredArticles();
-}
-function persistStarredArticles(){
-  const starred={};
-  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starred[id]=S.cachedArticles[id]; }
-  try{ localStorage.setItem(STAR_CACHE_KEY,JSON.stringify(starred)); }catch(e){}
-}
-function loadStarredArticles(){
-  try{
-    const d=localStorage.getItem(STAR_CACHE_KEY);
-    if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
-  }catch(e){}
-}
 
-// ═══════════════════════════════════════════════════════════
-// SCREENS
-// ═══════════════════════════════════════════════════════════
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// ═══════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════
-let _tt;
-function toast(msg,dur=2400){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('show');
-  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),dur);
-}
-
-// ═══════════════════════════════════════════════════════════
-// GREADER API
-// ═══════════════════════════════════════════════════════════
-async function apiGet(path, params={}){
-  params.output='json';
-  const qs=new URLSearchParams(params).toString();
-  const res=await fetch(`${S.server}/api/greader.php${path}?${qs}`,{headers:{Authorization:`GoogleLogin auth=${S.auth}`}});
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-async function apiPost(path, body){
-  const res=await fetch(`${S.server}/api/greader.php${path}`,{
-    method:'POST',
-    headers:{Authorization:`GoogleLogin auth=${S.auth}`,'Content-Type':'application/x-www-form-urlencoded'},
-    body:new URLSearchParams(body).toString()
-  });
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.text();
-}
-
-// ═══════════════════════════════════════════════════════════
-// LOGIN / LOGOUT
-// ═══════════════════════════════════════════════════════════
-async function doLogin(){
-  const btn=document.getElementById('login-btn');
-  const err=document.getElementById('login-err');
-  const server=document.getElementById('srv').value.trim().replace(/\/$/,'');
-  const user=document.getElementById('usr').value.trim();
-  const pass=document.getElementById('pwd').value;
-  if(!server||!user||!pass){err.textContent='Please fill all fields.';err.style.display='block';return;}
-  err.style.display='none'; btn.disabled=true; btn.textContent='Signing in…';
-  try{
-    const res=await fetch(`${server}/api/greader.php/accounts/ClientLogin`,{
-      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({Email:user,Passwd:pass}).toString()
-    });
-    const text=await res.text();
-    if(!res.ok) throw new Error('Invalid credentials');
-    const m=text.match(/Auth=([^\n]+)/);
-    if(!m) throw new Error('Auth token not found');
-    S.server=server; S.auth=m[1]; S.user=user;
-    saveSession(); await loadApp();
-  }catch(e){
-    err.textContent=e.message||'Connection failed';err.style.display='block';
-  }finally{ btn.disabled=false; btn.textContent='Sign in'; }
-}
-function doLogout(){
-  clearSession(); S.auth=''; S.articles=[]; S.cats=[];
-  showScreen('login-screen');
-}
-
-// ═══════════════════════════════════════════════════════════
-// LOAD APP
-// ═══════════════════════════════════════════════════════════
-async function loadApp(){
-  showScreen('app-screen');
-  loadPersistedArticles();
-  loadStarredArticles();
-  loadExcludedCats();
-  loadHiddenChannels();
-
-  if(!navigator.onLine){
-    showOfflineBanner(true);
-    renderFromCache();
-    return;
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
   }
-  try{
-    await Promise.all([loadCategories(), loadUnreadCounts()]);
-    await loadArticles();
-    showOfflineBanner(false);
-  }catch(e){
-    console.warn('loadApp network error, falling back to cache:', e);
-    showOfflineBanner(true);
-    renderFromCache();
-  }
-}
 
-function showOfflineBanner(show){
-  let banner=document.getElementById('offline-banner');
-  if(!banner){
-    banner=document.createElement('div');
-    banner.id='offline-banner';
-    banner.style.cssText=[
-      'position:sticky','top:calc(var(--safe-top) + var(--nav-h))','z-index:45',
-      'background:#92400e','color:#fef3c7',
-      'text-align:center','font-size:.78rem','font-weight:600',
-      'padding:6px 16px','display:none','align-items:center',
-      'justify-content:center','gap:8px'
-    ].join(';');
-    banner.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M12 20h.01"/></svg> Offline — showing cached articles`;
-    const appScreen=document.getElementById('app-screen');
-    const catBar=document.getElementById('cat-bar');
-    if(catBar) appScreen.insertBefore(banner, catBar);
-    else appScreen.insertBefore(banner, appScreen.firstChild);
+  function toast(msg, dur = 2000) {
+    const el = document.getElementById('toast');
+    el.innerText = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), dur);
   }
-  banner.style.display=show?'flex':'none';
-}
 
-function renderFromCache(){
-  const items=Object.values(S.cachedArticles).sort((a,b)=>(b.published||0)-(a.published||0));
-  if(!items.length){
-    document.getElementById('list-content').innerHTML=
-      `<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M12 20h.01"/></svg><p>You're offline and there are no cached articles yet.<br>Connect to load your feeds.</p></div>`;
-    return;
+  function clearSession() {
+    localStorage.removeItem('fr_auth');
+    localStorage.removeItem('fr_server');
+    localStorage.removeItem('fr_user');
+    location.reload();
   }
-  if(!S.cats.length){
-    const catMap={};
-    items.forEach(a=>{
-      const feedId=a.origin?.streamId||'__unknown__';
-      const feedTitle=a.origin?.title||'Unknown feed';
-      if(!catMap['__cached__']) catMap['__cached__']={label:'Cached',feeds:[]};
-      if(!catMap['__cached__'].feeds.find(f=>f.id===feedId)){
-        catMap['__cached__'].feeds.push({id:feedId,title:feedTitle});
-      }
-    });
-    S.cats=Object.entries(catMap).map(([id,v])=>({id,...v}));
-    window._catList=S.cats;
-    renderCatTabs();
-  }
-  S.articles=items;
-  renderArticleList();
-}
 
-// ═══════════════════════════════════════════════════════════
-// LOAD CATEGORIES + UNREAD (GReader)
-// ═══════════════════════════════════════════════════════════
-async function loadCategories(){
-  try{
-    const data=await apiGet('/reader/api/0/subscription/list');
-    const subs=data.subscriptions||[];
-    const catMap={};
-    for(const sub of subs){
-      const cats=sub.categories||[];
-      if(!cats.length){ if(!catMap['__none__']) catMap['__none__']={label:'Uncategorized',feeds:[]}; catMap['__none__'].feeds.push(sub); }
-      else{ for(const c of cats){ if(!catMap[c.id]) catMap[c.id]={label:c.label,feeds:[]}; catMap[c.id].feeds.push(sub); } }
+    // Helper to ensure all API calls go through the GReader PHP endpoint
+  function getApiUrl(path) {
+    let base = S.server.trim().replace(/\/$/, '');
+    // Auto-append the greader API endpoint if the user didn't type it
+    if (!base.endsWith('/api/greader.php')) {
+      base += '/api/greader.php';
     }
-    S.cats=Object.entries(catMap).map(([id,v])=>({id,...v}));
-    S.feeds=subs;
-    window._catList=S.cats;
-    renderCatTabs();
-  }catch(e){ console.error('loadCategories',e); }
-}
-
-async function loadUnreadCounts(){
-  try{
-    const data=await apiGet('/reader/api/0/unread-count');
-    S.unreadMap={};
-    (data.unreadcounts||[]).forEach(u=>{ S.unreadMap[u.id]=u.count; });
-  }catch(e){}
-}
-
-// ═══════════════════════════════════════════════════════════
-// CATEGORY TABS
-// ═══════════════════════════════════════════════════════════
-function renderCatTabs(){
-  const bar=document.getElementById('cat-bar');
-  const allU=S.unreadMap['user/-/state/com.google/reading-list']||0;
-  let h=`<button class="cat-tab ${S.currentCat==='__all__'?'active':''}" onclick="selectCat('__all__')">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  S.cats.forEach((c,i)=>{
-    const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    h+=`<button class="cat-tab ${S.currentCat===c.id?'active':''}" onclick="selectCatByIdx(${i})">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  bar.innerHTML=h;
-}
-function selectCatByIdx(i){ const c=window._catList&&window._catList[i]; if(c) selectCat(c.id); }
-function stopAllMedia(){
-  document.querySelectorAll('video,audio').forEach(el=>{ try{el.pause();}catch(e){} });
-  document.querySelectorAll('iframe').forEach(el=>{ try{el.src='about:blank';el.remove();}catch(e){} });
-  const sp=document.getElementById('shorts-player');
-  if(sp&&sp.classList.contains('open')) sp.classList.remove('open');
-  if(window._shortsObs){ window._shortsObs.disconnect(); window._shortsObs=null; }
-  if(window._shortsPlaying) window._shortsPlaying.clear();
-}
-function selectCat(id){
-  stopAllMedia();
-  S.currentCat=id; S.currentFeed=null;
-  renderCatTabs(); renderFeedBar();
-  const label=currentCatLabel();
-  if(id!=='__all__'&&isShortsMode(label)){ loadShortsMode(); return; }
-  if(id!=='__all__'&&isYoutubeMode(label)){ loadYoutubeMode(); return; }
-  showScreen('app-screen'); loadArticles();
-}
-function renderFeedBar(){
-  const bar=document.getElementById('feed-bar');
-  if(S.currentCat==='__all__'){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
-  const cat=S.cats.find(c=>c.id===S.currentCat);
-  if(!cat||cat.feeds.length<2){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
-  bar.classList.remove('hidden');
-  window._feedBarFeeds=cat.feeds;
-  const allU=cat.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-  let h=`<button class="feed-tab ${!S.currentFeed?'active':''}" onclick="selectFeed(null)">All feeds${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  cat.feeds.forEach((f,i)=>{
-    const u=S.unreadMap[f.id]||0;
-    h+=`<button class="feed-tab ${S.currentFeed===f.id?'active':''}" onclick="selectFeedByIdx(${i})">${esc(f.title||f.id)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  bar.innerHTML=h;
-}
-function selectFeedByIdx(i){ const f=window._feedBarFeeds&&window._feedBarFeeds[i]; if(f) selectFeed(f.id); }
-function selectFeed(id){ S.currentFeed=id; renderFeedBar(); loadArticles(); }
-function setFilter(f){
-  S.filter=f;
-  ['all','unread','starred'].forEach(x=>document.getElementById('f-'+x).classList.toggle('active',x===f));
-  renderArticleList();
-}
-
-// ═══════════════════════════════════════════════════════════
-// LOAD ARTICLES (GReader)
-// ═══════════════════════════════════════════════════════════
-async function loadArticles(){
-  const el=document.getElementById('list-content');
-  el.innerHTML=skelHtml(5);
-  try{
-    const params={n:50};
-    let streamId;
-    if(S.currentFeed) streamId=S.currentFeed;
-    else if(S.currentCat==='__all__') streamId='user/-/state/com.google/reading-list';
-    else streamId=S.currentCat;
-    if(S.filter==='unread') params.xt='user/-/state/com.google/read';
-    else if(S.filter==='starred') streamId='user/-/state/com.google/starred';
-    params.s=streamId;
-    const data=await apiGet('/reader/api/0/stream/contents',params);
-    let items=data.items||[];
-    items.forEach(a=>{
-      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
-      if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
-    });
-
-    // For __all__, exclude categories the user has hidden from the main feed
-    if(S.currentCat==='__all__' && S.excludedCatIds.size>0 && S.filter!=='starred'){
-      items=items.filter(a=>{
-        // GReader stream IDs for categories look like "user/-/label/CategoryName"
-        // The feed's origin.streamId is the feed URL stream id; we match via subscription categories
-        const feedId=a.origin?.streamId;
-        if(!feedId) return true;
-        // Find which cat this feed belongs to
-        const cat=S.cats.find(c=>c.feeds.some(f=>f.id===feedId));
-        if(!cat) return true;
-        return !S.excludedCatIds.has(cat.id);
-      });
-    }
-
-    cacheArticles(items);
-    S.articles=items;
-    renderArticleList();
-  }catch(e){
-    el.innerHTML=`<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load: ${esc(e.message)}</p></div>`;
+    return base + path;
   }
-}
 
-function visibleArticles(){
-  if(S.filter==='unread') return S.articles.filter(a=>!S.readSet.has(a.id));
-  if(S.filter==='starred') return S.articles.filter(a=>S.starSet.has(a.id));
-  return S.articles;
-}
-
-function renderArticleList(){
-  const el=document.getElementById('list-content');
-  const arts=visibleArticles();
-  if(!arts.length){ el.innerHTML=`<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No articles</p></div>`; return; }
-  el.innerHTML=arts.map((a,i)=>{
-    const read=S.readSet.has(a.id), starred=S.starSet.has(a.id);
-    const feed=a.origin?.title||'';
-    const raw=a.summary?.content||a.content?.content||'';
-    const thumb=firstImg(raw);
-    const snip=stripTags(raw).slice(0,130);
-    const date=fmtDate(a.published*1000);
-    return `<div class="article-card ${read?'read':''}" onclick="openArticle(${i})">
-      ${thumb?`<img class="card-thumb" src="${esc(thumb)}" loading="lazy" onerror="this.style.display='none'"/>`:''} 
-      <div class="card-meta">
-        <span class="card-feed">${esc(feed)}</span>
-        <span>${esc(date)}</span>
-        ${starred?'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>':''}
-        ${!read?'<span class="unread-dot" style="margin-left:auto"></span>':''}
-      </div>
-      <div class="card-title">${esc(a.title||'Untitled')}</div>
-      ${snip?`<div class="card-snippet">${esc(snip)}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-// ARTICLE READER
-// ═══════════════════════════════════════════════════════════
-async function openArticle(idx, dir){
-  const arts=visibleArticles();
-  const a=arts[idx]; if(!a) return;
-  S.curIdx=idx; S.curArticle=a;
-  if(dir){ await animateSwipe(dir,()=>renderReader(a)); }
-  else{ renderReader(a); showScreen('reader-screen'); }
-  updateReaderNav(idx,arts.length);
-  if(!S.readSet.has(a.id)){
-    S.readSet.add(a.id);
-    apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+  async function apiGet(path) {
+    const url = getApiUrl(path);
+    const headers = { 'Authorization': `GoogleLogin auth=${S.auth}` };
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error('API Error: ' + res.status);
+    return res;
   }
-  updateStarBtn();
-}
-function navigateArticle(delta){
-  const arts=visibleArticles();
-  const ni=S.curIdx+delta;
-  if(ni<0||ni>=arts.length) return;
-  openArticle(ni,delta>0?'next':'prev');
-}
-function updateReaderNav(idx,total){
-  document.getElementById('reader-ctr').textContent=`${idx+1} / ${total}`;
-  document.getElementById('sh-l').classList.toggle('show',idx>0);
-  document.getElementById('sh-r').classList.toggle('show',idx<total-1);
-}
-async function animateSwipe(dir,fn){
-  const w=document.getElementById('reader-swipe');
-  w.classList.add(dir==='next'?'out-left':'out-right');
-  await sleep(220);
-  fn(); w.scrollTop=0;
-  w.classList.remove('out-left','out-right');
-  w.classList.add(dir==='next'?'in-left':'in-right');
-  w.getBoundingClientRect();
-  w.classList.remove('in-left','in-right');
-}
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-function renderReader(a){
-  const raw=a.summary?.content||a.content?.content||'';
-  const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
-  const feed=a.origin?.title||'';
-  const date=a.published?new Date(a.published*1000).toLocaleString(undefined,{dateStyle:'long',timeStyle:'short'}):'';
-  const author=a.author?`By ${a.author}`:'';
-  document.getElementById('reader-feed-lbl').textContent=feed;
-  document.getElementById('reader-body').innerHTML=`
-    <div class="reader-feed-label">${esc(feed)}</div>
-    <div class="reader-title">${esc(a.title||'Untitled')}</div>
-    <div class="reader-byline">${author?`<span>${esc(author)}</span>`:''}${date?`<span>${esc(date)}</span>`:''}</div>
-    <div class="reader-content">${sanitize(raw)}</div>
-    ${url?`<a class="open-ext" href="${esc(url)}" target="_blank" rel="noopener">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      View original</a>`:''}`;
-}
-function closeReader(){ stopAllMedia(); renderArticleList(); showScreen('app-screen'); }
-function updateStarBtn(){
-  const a=S.curArticle; if(!a) return;
-  const starred=S.starSet.has(a.id);
-  const btn=document.getElementById('star-btn');
-  btn.style.color=starred?'var(--accent)':'';
-  const poly=btn.querySelector('polygon'); if(poly) poly.setAttribute('fill',starred?'currentColor':'none');
-}
-function toggleStar(){
-  const a=S.curArticle; if(!a) return;
-  const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
-  if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Starred ★'); }
-  persistStarredArticles();
-  updateStarBtn();
-}
-async function markReadCurrent(){
-  const a=S.curArticle; if(!a) return;
-  S.readSet.add(a.id);
-  await apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
-  toast('Marked read');
-}
-function openOrig(){
-  const a=S.curArticle;
-  const url=a?.canonical?.[0]?.href||a?.alternate?.[0]?.href;
-  if(url) window.open(url,'_blank','noopener'); else toast('No URL');
-}
-async function markAllRead(){
-  if(!confirm('Mark all visible articles as read?')) return;
-  try{
-    const ts=Math.floor(Date.now()/1000);
-    const sid=S.currentCat==='__all__'?'user/-/state/com.google/reading-list':S.currentCat;
-    await apiPost('/reader/api/0/mark-all-as-read',{s:sid,ts});
-    S.articles.forEach(a=>S.readSet.add(a.id));
-    renderArticleList(); toast('All marked read');
-  }catch(e){ toast('Failed: '+e.message); }
-}
-
-// ═══════════════════════════════════════════════════════════
-// SWIPE GESTURES (reader)
-// ═══════════════════════════════════════════════════════════
-(function(){
-  let sx=0,sy=0,st=0;
-  const T=52, MY=80, MT=380;
-  document.getElementById('reader-screen').addEventListener('touchstart',e=>{
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY; st=Date.now();
-  },{passive:true});
-  document.getElementById('reader-screen').addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-sx;
-    const dy=Math.abs(e.changedTouches[0].clientY-sy);
-    const dt=Date.now()-st;
-    if(Math.abs(dx)<T||dy>MY||dt>MT) return;
-    const el=document.elementFromPoint(sx,sy);
-    if(el&&el.closest('.vid-wrap,iframe,video,.yt-poster')) return;
-    if(dx<0) navigateArticle(1); else navigateArticle(-1);
-  },{passive:true});
-  document.addEventListener('keydown',e=>{
-    if(!document.getElementById('reader-screen').classList.contains('active')) return;
-    if(e.key==='ArrowRight'||e.key==='ArrowDown') navigateArticle(1);
-    if(e.key==='ArrowLeft'||e.key==='ArrowUp') navigateArticle(-1);
-    if(e.key==='Escape') closeReader();
-  });
-})();
-
-// ═══════════════════════════════════════════════════════════
-// CATEGORY SCROLL
-// ═══════════════════════════════════════════════════════════
-(function(){
-  let sy=0, st=0;
-  function swipeCat(dir){
-    const active=S.cats.findIndex(c=>c.id===S.currentCat);
-    const total=S.cats.length;
-    let next;
-    if(dir>0){
-      if(S.currentCat==='__all__') next=S.cats[0]?.id;
-      else if(active<total-1) next=S.cats[active+1]?.id;
-    } else {
-      if(active===0||S.currentCat==='__all__') return;
-      if(active>0) next=S.cats[active-1]?.id;
-      else next='__all__';
-    }
-    if(next) selectCat(next);
-  }
-  document.addEventListener('touchstart',e=>{
-    const el=e.target.closest('.cat-bar'); if(!el) return;
-    sy=e.touches[0].clientY; st=Date.now();
-  },{passive:true});
-  document.addEventListener('touchend',e=>{
-    const el=e.target.closest('.cat-bar'); if(!el) return;
-    const dy=e.changedTouches[0].clientY-sy;
-    const dt=Date.now()-st;
-    if(Math.abs(dy)<40||dt>400) return;
-    swipeCat(dy<0?1:-1);
-  },{passive:true});
-  document.addEventListener('wheel',e=>{
-    const el=e.target.closest('.cat-bar'); if(!el) return;
-    e.preventDefault(); swipeCat(e.deltaY>0?1:-1);
-  },{passive:false});
-})();
-
-// ═══════════════════════════════════════════════════════════
-// YOUTUBE MODE
-// ═══════════════════════════════════════════════════════════
-async function loadYoutubeMode(){
-  stopAllMedia();
-  showScreen('yt-screen');
-  const label=currentCatLabel()||'YouTube';
-  const titleEl=document.getElementById('yt-screen-title');
-  if(titleEl) titleEl.textContent='▶ '+label;
-  const grid=document.getElementById('yt-grid');
-  const catBar=document.getElementById('yt-cat-bar');
-  const allU=Object.values(S.unreadMap).reduce((s,n)=>s+n,0);
-  let h=`<button class="cat-tab" onclick="selectCat('__all__')" style="color:#aaa;border-color:transparent">All</button>`;
-  S.cats.forEach((c,i)=>{
-    const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    const active=S.currentCat===c.id;
-    h+=`<button class="cat-tab ${active?'active':''}" onclick="selectCatByIdx(${i})" style="${active?'':'color:#aaa;border-color:transparent'}">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  catBar.innerHTML=h;
-  grid.innerHTML=ytSkelHtml(6);
-  try{
-    const params={n:50,s:S.currentCat};
-    const data=await apiGet('/reader/api/0/stream/contents',params);
-    const items=data.items||[];
-    items.forEach(a=>{
-      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
-    });
-    cacheArticles(items);
-    S.ytArticles=items;
-    renderYtGrid();
-  }catch(e){ grid.innerHTML=`<div class="empty" style="color:#aaa"><p>${esc(e.message)}</p></div>`; }
-}
-
-function setYtFilter(f){
-  S.ytFilter=f;
-  ['all','unread','starred','hidden'].forEach(x=>{
-    const btn=document.getElementById('yf-'+x);
-    if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; }
-  });
-  renderYtGrid();
-}
-
-function renderYtGrid(){
-  const grid=document.getElementById('yt-grid');
-  let arts=S.ytArticles;
-  if(S.ytFilter==='unread')  arts=arts.filter(a=>!S.readSet.has(a.id)&&!isChannelHidden(a));
-  else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
-  else if(S.ytFilter==='hidden') arts=arts.filter(a=>isChannelHidden(a));
-  else arts=arts.filter(a=>!isChannelHidden(a)); // 'all' hides hidden channels
-  if(!arts.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No videos</p></div>'; return; }
-  grid.innerHTML=arts.map((a)=>{
-    const trueIdx=S.ytArticles.indexOf(a);
-    const raw=a.summary?.content||a.content?.content||'';
-    const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-    const thumb=ytId?`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`:firstImg(raw)||'';
-    const ch=a.origin?.title||a.author||'';
-    const date=fmtDate(a.published*1000);
-    const read=S.readSet.has(a.id);
-    const starred=S.starSet.has(a.id);
-    const hidden=isChannelHidden(a);
-    return `<div class="yt-card" onclick="openYtArticle(${trueIdx})" style="${read?'opacity:.6':''}">
-      <div class="yt-thumb-wrap">
-        ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.style.display='none'"/>`:'<div style="position:absolute;inset:0;background:#222;display:flex;align-items:center;justify-content:center;color:#555">▶</div>'}
-        ${!read?'<div style="position:absolute;top:8px;left:8px;width:8px;height:8px;background:#f87171;border-radius:50%"></div>':''}
-        ${starred?'<div style="position:absolute;top:8px;right:8px;color:#f59e0b;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.8)">★</div>':''}
-      </div>
-      <div class="yt-card-info">
-        <div class="yt-channel-icon">${ch.charAt(0).toUpperCase()}</div>
-        <div class="yt-card-meta">
-          <div class="yt-card-title">${esc(a.title||'Untitled')}</div>
-          <div class="yt-card-sub">${esc(ch)} · ${esc(date)}</div>
-          ${!hidden?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${esc(ch)}')">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="7 7 7 17 17 17"/></svg>
-            Hide channel</button>`:`<button class="yt-hide-btn" style="color:var(--accent)" onclick="event.stopPropagation();unhideChannel('${esc(channelKey(ch))}')">Restore</button>`}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function ytSearch(){
-  const q=(document.getElementById('yt-search-input').value||'').trim();
-  if(!q) return;
-  const ytId=extractYtId(q);
-  if(ytId){
-    const fake={id:'search-'+ytId,title:q,canonical:[{href:'https://www.youtube.com/watch?v='+ytId}],origin:{title:'YouTube'},author:'',published:Math.floor(Date.now()/1000),summary:{content:''},_search:true};
-    S.ytCurArticle=fake; renderYtReader(fake); showScreen('yt-reader');
-  } else {
-    window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank','noopener');
-    toast('Opening YouTube search…');
-  }
-}
-function openYtArticle(idx){
-  const a=S.ytArticles[idx]; if(!a) return;
-  S.ytCurIdx=idx; S.ytCurArticle=a;
-  if(!S.readSet.has(a.id)){ S.readSet.add(a.id); apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
-  renderYtReader(a);
-  showScreen('yt-reader');
-}
-function renderYtReader(a){
-  const raw=a.summary?.content||a.content?.content||'';
-  const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
-  const ch=a.origin?.title||a.author||'';
-  const date=a.published?new Date(a.published*1000).toLocaleString(undefined,{dateStyle:'long',timeStyle:'short'}):'';
-  const ytId=extractYtId(url)||extractYtId(raw);
-  document.getElementById('yt-reader-ch').textContent=ch;
-  const body=document.getElementById('yt-reader-body');
-  const starred=S.starSet.has(a.id);
-  const starPoly=document.getElementById('yt-star-btn').querySelector('polygon');
-  if(starPoly){ starPoly.setAttribute('fill',starred?'#f59e0b':'none'); document.getElementById('yt-star-btn').style.color=starred?'#f59e0b':'#aaa'; }
-  body.innerHTML=`
-    ${ytId?`<div class="yt-player-wrap">
-      <div class="yt-player-poster yt-poster" id="ytr-poster-${ytId}" onclick="launchYt('${ytId}','ytr-poster-${ytId}')">
-        <div class="yt-player-ratio">
-          <img src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-          <div class="yt-poster-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="8,5 19,12 8,19"/></svg></div></div>
-        </div>
-      </div>
-    </div>`:sanitize(raw)}
-    <div class="yt-video-info">
-      <div class="yt-video-title">${esc(a.title||'')}</div>
-      <div class="yt-video-meta">${esc(ch)} · ${esc(date)}</div>
-      <div class="yt-actions">
-        <button class="yt-action-btn" onclick="toggleYtStar()">
-          <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span>Save</span>
-        </button>
-        ${url?`<button class="yt-action-btn" onclick="window.open('${esc(url)}','_blank','noopener')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          <span>Open</span>
-        </button>`:''}
-      </div>
-      ${raw?`<div class="yt-video-desc" style="color:#ccc">${esc(stripTags(raw).slice(0,400))}</div>`:''}
-    </div>`;
-}
-function closeYtReader(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(); }
-function toggleYtStar(){
-  const a=S.ytCurArticle; if(!a) return;
-  const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
-  if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Saved ★'); }
-  persistStarredArticles();
-  renderYtReader(a);
-}
-function launchYt(id, posterId){
-  const poster=document.getElementById(posterId); if(!poster) return;
-  const ratio=poster.querySelector('.yt-player-ratio,.vid-ratio');
-  if(!ratio) return;
-  ratio.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
-  poster.onclick=null;
-}
-
-// ═══════════════════════════════════════════════════════════
-// SHORTS / TIKTOK MODE
-// ═══════════════════════════════════════════════════════════
-async function loadShortsMode(){
-  stopAllMedia();
-  showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent=currentCatLabel()||'Shorts';
-  renderShortsCatBar();
-  renderShortsFeedBar();
-  const gallery=document.getElementById('shorts-gallery');
-  gallery.innerHTML='<div style="padding:60px 20px;text-align:center;color:#666">Loading…</div>';
-  try{
-    const params={n:50};
-    let streamId=S.currentFeed||S.currentCat;
-    if(S.shortsFilter==='unread') params.xt='user/-/state/com.google/read';
-    else if(S.shortsFilter==='starred') streamId='user/-/state/com.google/starred';
-    params.s=streamId;
-    const data=await apiGet('/reader/api/0/stream/contents',params);
-    const items=data.items||[];
-    items.forEach(a=>{
-      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
-      if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
-    });
-    cacheArticles(items);
-    S.shortsArticles=items;
-    renderShortsGallery();
-  }catch(e){ gallery.innerHTML=`<div style="padding:60px 20px;text-align:center;color:#666">${esc(e.message)}</div>`; }
-}
-function exitShortsMode(){ stopAllMedia(); selectCat('__all__'); }
-
-function renderShortsCatBar(){
-  const bar=document.getElementById('shorts-cat-bar'); if(!bar) return;
-  let h=`<button class="cat-tab" onclick="exitShortsMode()" style="color:#aaa;border-color:transparent">All</button>`;
-  S.cats.forEach((c,i)=>{
-    const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    const active=S.currentCat===c.id;
-    h+=`<button class="cat-tab ${active?'active':''}" onclick="selectCatByIdx(${i})" style="${active?'':'color:#aaa;border-color:transparent'}">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  bar.innerHTML=h;
-}
-function renderShortsFeedBar(){
-  const bar=document.getElementById('shorts-feed-bar'); if(!bar) return;
-  const cat=S.cats.find(c=>c.id===S.currentCat);
-  if(!cat||cat.feeds.length<2){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
-  bar.classList.remove('hidden');
-  window._feedBarFeeds=cat.feeds;
-  const allU=cat.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-  let h=`<button class="feed-tab ${!S.currentFeed?'active':''}" onclick="selectShortsFeed(null)" style="${!S.currentFeed?'':'background:transparent;color:#aaa;border-color:#444'}">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  cat.feeds.forEach((f,i)=>{
-    const u=S.unreadMap[f.id]||0;
-    const active=S.currentFeed===f.id;
-    h+=`<button class="feed-tab ${active?'active':''}" onclick="selectShortsFeedByIdx(${i})" style="${active?'':'background:transparent;color:#aaa;border-color:#444'}">${esc(f.title||f.id)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  bar.innerHTML=h;
-}
-function selectShortsFeed(id){ S.currentFeed=id; loadShortsMode(); }
-function selectShortsFeedByIdx(i){ const f=window._feedBarFeeds&&window._feedBarFeeds[i]; if(f) selectShortsFeed(f.id); }
-function setShortsFilter(f){
-  S.shortsFilter=f;
-  ['all','unread','starred','hidden'].forEach(x=>{
-    const btn=document.getElementById('sf-'+x);
-    if(btn) btn.classList.toggle('active',x===f);
-  });
-  loadShortsMode();
-}
-
-function renderShortsGallery(){
-  const gallery=document.getElementById('shorts-gallery');
-  let arts=S.shortsArticles;
-  if(S.shortsFilter==='unread')  arts=arts.filter(a=>!S.readSet.has(a.id)&&!isChannelHidden(a));
-  else if(S.shortsFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
-  else if(S.shortsFilter==='hidden') arts=arts.filter(a=>isChannelHidden(a));
-  else arts=arts.filter(a=>!isChannelHidden(a));
-  gallery.innerHTML=arts.map((a,i)=>{
-    const raw=a.summary?.content||a.content?.content||'';
-    const realIdx=S.shortsArticles.indexOf(a);
-    const thumb=getShortThumb(a,raw);
-    const read=S.readSet.has(a.id);
-    return `<div class="shorts-gallery-card" onclick="openShortsPlayer(${realIdx})">
-      ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.style.background='#222';this.style.display='none'"/>`:'<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:#444;font-size:1.5rem">▶</div>'}
-      <div class="play-badge">▶</div>
-      ${!read?'<div class="unread-pip"></div>':''}
-    </div>`;
-  }).join('');
-}
-
-function getShortThumb(a, raw){
-  const tmp=document.createElement('div'); tmp.innerHTML=raw;
-  const video=tmp.querySelector('video');
-  if(video&&video.getAttribute('poster')) return video.getAttribute('poster');
-  const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-  if(ytId) return `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`;
-  return firstImg(raw)||'';
-}
-
-function openShortsPlayer(startIdx){
-  S.shortsPlayerIdx=startIdx;
-  const player=document.getElementById('shorts-player');
-  player.classList.add('open');
-  renderShortsSlides(startIdx);
-  attachSlideVideos();
-  requestAnimationFrame(()=>{
-    const slides=document.getElementById('shorts-slides');
-    const el=slides.children[startIdx];
-    if(el) el.scrollIntoView({behavior:'instant'});
-    playSlideAt(startIdx);
-  });
-  observeShortsSlides();
-}
-function closeShortsPlayer(){
-  const player=document.getElementById('shorts-player');
-  document.querySelectorAll('.short-slide video').forEach(v=>{ try{v.pause();}catch(e){} });
-  document.querySelectorAll('.short-slide iframe').forEach(f=>f.remove());
-  player.classList.remove('open');
-}
-
-function renderShortsSlides(startIdx){
-  const slides=document.getElementById('shorts-slides');
-  slides.innerHTML=S.shortsArticles.map((a,i)=>{
-    const raw=a.summary?.content||a.content?.content||'';
-    const title=a.title||'';
-    const author=a.author||a.origin?.title||'';
-    const starred=S.starSet.has(a.id);
-    return `<div class="short-slide" id="ss-${i}" data-idx="${i}">
-      ${buildSlideMedia(a,raw,i)}
-      <div class="short-overlay">
-        <div class="short-title">${esc(title)}</div>
-        <div class="short-author">${esc(author)}</div>
-      </div>
-      <div class="short-actions">
-        <div class="short-action" onclick="toggleShortStar(${i})">
-          <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'white'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span>${starred?'Saved':'Save'}</span>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function buildSlideMedia(a, raw, idx){
-  const tmp=document.createElement('div'); tmp.innerHTML=raw;
-  const video=tmp.querySelector('video');
-  if(video){
-    const source=video.querySelector('source');
-    const src=source?.getAttribute('src')||video.getAttribute('src')||'';
-    const poster=video.getAttribute('poster')||'';
-    if(src){
-      return `<div class="slide-video-placeholder" id="svp-${idx}"
-        data-src="${esc(src)}"
-        ${poster?`data-poster="${esc(poster)}"`:''}
-        style="position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="rgba(255,255,255,.3)" stroke="none"/></svg>
-      </div>`;
-    }
-  }
-  const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-  if(ytId){
-    const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-    return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}');event.stopPropagation()">
-      <img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
-        <div style="width:56px;height:40px;background:rgba(255,0,0,.9);border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="8,5 19,12 8,19"/></svg>
-        </div>
-      </div>
-    </div>`;
-  }
-  return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#444;font-size:2rem">▶</div>`;
-}
-
-function attachSlideVideos(){
-  document.querySelectorAll('.slide-video-placeholder').forEach(placeholder=>{
-    const src=placeholder.dataset.src;
-    const poster=placeholder.dataset.poster||'';
-    if(!src) return;
-    const video=document.createElement('video');
-    video.src=src;
-    if(poster) video.poster=poster;
-    video.playsInline=true;
-    video.setAttribute('playsinline','');
-    video.setAttribute('webkit-playsinline','');
-    video.controls=true;
-    video.preload='metadata';
-    video.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#000;';
-    video.onerror=function(){
-      try{
-        const slide=this.closest?this.closest('.short-slide'):null;
-        const idx=slide?parseInt(slide.dataset.idx||'0'):-1;
-        const a=idx>=0?S.shortsArticles[idx]:null;
-        const url=(a?.canonical?.[0]?.href||a?.alternate?.[0]?.href||'').replace(/['"<>]/g,'');
-        const fallback=document.createElement('div');
-        fallback.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;gap:14px;padding:24px;text-align:center';
-        const msg=document.createElement('p');
-        msg.style.cssText='color:rgba(255,255,255,.5);font-size:.85rem;line-height:1.5';
-        msg.textContent='This video cannot play in-app.';
-        fallback.appendChild(msg);
-        if(url){ const link=document.createElement('a'); link.href=url; link.target='_blank'; link.rel='noopener'; link.textContent='Open original ↗'; link.style.cssText='padding:9px 18px;background:rgba(255,255,255,.1);color:#fff;border-radius:20px;font-size:.82rem;font-weight:600;text-decoration:none'; fallback.appendChild(link); }
-        if(this.parentNode) this.parentNode.replaceChild(fallback,this);
-      }catch(e){}
+  async function apiPost(path, data = {}) {
+    const url = getApiUrl(path);
+    const headers = { 
+      'Authorization': `GoogleLogin auth=${S.auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded' 
     };
-    placeholder.parentNode.replaceChild(video, placeholder);
-  });
-}
+    const body = new URLSearchParams(data).toString();
+    const res = await fetch(url, { method: 'POST', headers, body });
+    if (!res.ok) throw new Error('API Error: ' + res.status);
+    return res;
+  }
 
-function loadSlideYt(idx, id){
-  const slide=document.getElementById('ss-'+idx); if(!slide) return;
-  if(slide.querySelector('iframe')) return;
-  const poster=document.getElementById(`sp-poster-${idx}`); if(!poster) return;
-  const iframe=document.createElement('iframe');
-  iframe.src=`https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`;
-  iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
-  iframe.setAttribute('allowfullscreen','');
-  iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;z-index:2;';
-  poster.parentNode.insertBefore(iframe,poster);
-  poster.remove();
-}
-function playSlideAt(idx){
-  const slide=document.getElementById('ss-'+idx); if(!slide) return;
-  if(slide.querySelector('iframe')) return;
-  const video=slide.querySelector('video');
-  if(video&&video.paused) video.play().catch(()=>{});
-}
-function pauseSlideAt(idx){
-  const slide=document.getElementById('ss-'+idx); if(!slide) return;
-  slide.querySelectorAll('video,audio').forEach(el=>{ try{el.pause();}catch(e){} });
-  slide.querySelectorAll('iframe').forEach(f=>{
-    try{ f.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}','*'); }catch(e){}
-    try{ f.src='about:blank'; }catch(e){}
-    setTimeout(()=>{ try{f.remove();}catch(e){} },50);
-  });
-  const a=S.shortsArticles[idx];
-  if(a){
-    const raw=a.summary?.content||a.content?.content||'';
-    const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-    if(ytId&&!slide.querySelector('video')&&!slide.querySelector('iframe')){
-      const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-      const div=document.createElement('div');
-      div.id=`sp-poster-${idx}`;
-      div.style.cssText='position:absolute;inset:0;cursor:pointer';
-      div.onclick=()=>loadSlideYt(idx,ytId);
-      div.innerHTML=`<img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
-          <div style="width:56px;height:40px;background:rgba(255,0,0,.9);border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="8,5 19,12 8,19"/></svg></div>
-        </div>`;
-      slide.insertBefore(div,slide.firstChild);
+  async function loadApp() {
+    showScreen('app-screen');
+    await loadCategories();
+    await loadArticles();
+  }
+
+  async function loadCategories() {
+    const res = await apiGet('/reader/api/0/subscription/list?output=json');
+    const data = await res.json();
+    
+    // Group subscriptions by category
+    const catMap = {};
+    data.subscriptions.forEach(sub => {
+      const cat = sub.categories && sub.categories[0] ? sub.categories[0].label : 'Uncategorized';
+      if (!catMap[cat]) catMap[cat] = { id: sub.categories && sub.categories[0] ? sub.categories[0].id : cat, label: cat, feeds: [] };
+      catMap[cat].feeds.push(sub);
+    });
+    
+    S.cats = Object.values(catMap);
+
+    // MERGE "YT Shorts" INTO "YouTube"
+    let ytCat = S.cats.find(c => c.label.toLowerCase() === 'youtube');
+    let shortsCatIndex = S.cats.findIndex(c => c.label.toLowerCase() === 'yt shorts');
+    if (ytCat && shortsCatIndex !== -1) {
+      let shortsCat = S.cats[shortsCatIndex];
+      // Move all feeds from Shorts category into the main YouTube category
+      ytCat.feeds.push(...shortsCat.feeds);
+      // Remove the standalone Shorts category
+      S.cats.splice(shortsCatIndex, 1);
+    }
+    
+    renderCatTabs();
+  }
+
+  async function loadArticles(isLoadMore = false) {
+    const el = document.getElementById('list-content');
+    const ytEl = document.getElementById('yt-list-content');
+    if (!isLoadMore) {
+      el.innerHTML = '<div class="empty"><div class="skel" style="width:100%"><div class="skel-line"></div><div class="skel-line"></div></div></div>';
+      ytEl.innerHTML = el.innerHTML;
+    }
+
+    let streamId = S.currentFeed || (S.currentCat && S.currentCat !== 'all' ? S.currentCat : 'user/-/state/com.google/reading-list');
+    
+    // Check if we are in a custom sub-filter mode, if so, load the base youtube cat to filter locally
+    if (S.currentFeed === 'shorts_sub_filter' || S.currentFeed === 'hidden_sub_filter') {
+        streamId = S.currentCat;
+    }
+
+    let url = `/reader/api/0/stream/contents/${encodeURIComponent(streamId)}?n=50`;
+    
+    // Apply pagination
+    if (isLoadMore && S.continuation) {
+      url += `&c=${S.continuation}`;
+    }
+
+    try {
+      const res = await apiGet(url);
+      const data = await res.json();
+      
+      S.continuation = data.continuation || null;
+
+      if (isLoadMore) {
+        S.articles.push(...data.items);
+      } else {
+        S.articles = data.items;
+      }
+      
+      // Update read/starred sets
+      data.items.forEach(a => {
+        if (a.categories.some(c => c.includes('read'))) S.readSet.add(a.id);
+        if (a.categories.some(c => c.includes('starred'))) S.starSet.add(a.id);
+      });
+
+      renderArticleList();
+    } catch (e) {
+      toast('Failed to load articles');
     }
   }
-}
 
-window._shortsObs=null;
-window._shortsPlaying=new Set();
-function observeShortsSlides(){
-  if(window._shortsObs) window._shortsObs.disconnect();
-  window._shortsPlaying.clear();
-  const slidesEl=document.getElementById('shorts-slides');
-  window._shortsObs=new IntersectionObserver(entries=>{
-    entries.forEach(e=>{
-      const idx=parseInt(e.target.dataset.idx);
-      if(e.isIntersecting){
-        S.shortsPlayerIdx=idx;
-        const titleEl=document.getElementById('shorts-player-title');
-        if(titleEl) titleEl.textContent=S.shortsArticles[idx]?.title||'';
-        if(!window._shortsPlaying.has(idx)){ window._shortsPlaying.add(idx); playSlideAt(idx); }
-        const a=S.shortsArticles[idx];
-        if(a&&!S.readSet.has(a.id)){
-          S.readSet.add(a.id);
-          apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+  function visibleArticles() {
+    let arts = S.articles;
+    
+    // 1. Unread/Starred Filter
+    if (S.filter === 'unread') {
+      arts = arts.filter(a => !S.readSet.has(a.id));
+    } else if (S.filter === 'starred') {
+      arts = arts.filter(a => S.starSet.has(a.id));
+    }
+
+    // 2. Determine if we are viewing YouTube feeds
+    const activeCatObj = S.cats.find(c => c.id === S.currentCat);
+    const isYouTube = activeCatObj && activeCatObj.label.toLowerCase() === 'youtube';
+
+    // 3. Handle Sub-filters (Shorts & Hidden)
+    if (isYouTube) {
+      if (S.currentFeed === 'shorts_sub_filter') {
+        arts = arts.filter(a => (a.canonical && a.canonical[0].href.includes('/shorts/')));
+        // Also strip hidden channels from shorts
+        arts = arts.filter(a => !S.hiddenChannels.has(a.author));
+      } else if (S.currentFeed === 'hidden_sub_filter') {
+        // ONLY show hidden channels
+        return arts.filter(a => S.hiddenChannels.has(a.author));
+      } else {
+        // Main YouTube feed: Remove hidden channels AND shorts
+        arts = arts.filter(a => !S.hiddenChannels.has(a.author) && !(a.canonical && a.canonical[0].href.includes('/shorts/')));
+      }
+    } else {
+      // Hide channels globally on non-YouTube feeds if needed
+      arts = arts.filter(a => !S.hiddenChannels.has(a.author));
+    }
+
+    return arts;
+  }
+
+  function renderCatTabs() {
+    const el = document.getElementById('cat-bar');
+    const ytEl = document.getElementById('yt-cat-bar');
+    
+    const html = `
+      <button class="cat-tab ${!S.currentCat ? 'active' : ''}" onclick="selectCat(null)">All</button>
+      ${S.cats.map(c => `<button class="cat-tab ${S.currentCat === c.id ? 'active' : ''}" onclick="selectCat('${esc(c.id)}')">${esc(c.label)}</button>`).join('')}
+    `;
+    
+    el.innerHTML = html;
+    ytEl.innerHTML = html;
+  }
+
+  function renderFeedTabs() {
+    const el = document.getElementById('feed-bar');
+    const ytEl = document.getElementById('yt-feed-bar');
+    const cat = S.cats.find(c => c.id === S.currentCat);
+    
+    if (!cat || !cat.feeds.length) {
+      el.classList.add('hidden');
+      ytEl.classList.add('hidden');
+      return;
+    }
+    
+    el.classList.remove('hidden');
+    ytEl.classList.remove('hidden');
+
+    let html = `<button class="feed-tab ${!S.currentFeed ? 'active' : ''}" onclick="selectFeed(null)">All ${esc(cat.label)}</button>`;
+    
+    // Inject Custom Sub-Filters for YouTube Category
+    if (cat.label.toLowerCase() === 'youtube') {
+      html += `<button class="feed-tab ${S.currentFeed === 'shorts_sub_filter' ? 'active' : ''}" onclick="selectFeed('shorts_sub_filter')">Shorts</button>`;
+      html += `<button class="feed-tab ${S.currentFeed === 'hidden_sub_filter' ? 'active' : ''}" onclick="selectFeed('hidden_sub_filter')">Hidden Channels</button>`;
+    }
+
+    html += cat.feeds.map(f => `<button class="feed-tab ${S.currentFeed === f.id ? 'active' : ''}" onclick="selectFeed('${esc(f.id)}')">${esc(f.title)}</button>`).join('');
+    
+    el.innerHTML = html;
+    ytEl.innerHTML = html;
+  }
+
+  function selectCat(id) {
+    S.currentCat = id;
+    S.currentFeed = null;
+    S.continuation = null; // Reset pagination
+    const cat = S.cats.find(c => c.id === id);
+    if (cat && cat.label.toLowerCase() === 'youtube') {
+      showScreen('yt-screen');
+    } else {
+      showScreen('app-screen');
+    }
+    renderCatTabs();
+    renderFeedTabs();
+    loadArticles();
+  }
+
+  function selectFeed(id) {
+    S.currentFeed = id;
+    S.continuation = null; // Reset pagination
+    renderFeedTabs();
+    loadArticles();
+  }
+
+  function setFilter(f) {
+    S.filter = f;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('filter-' + f)?.classList.add('active');
+    document.getElementById('yt-filter-' + f)?.classList.add('active');
+    renderArticleList();
+  }
+
+  async function loadMoreArticles() {
+    const btn = document.getElementById('load-more-btn');
+    if(btn) btn.innerText = 'Loading...';
+    await loadArticles(true);
+  }
+
+  function renderArticleList() {
+    const activeCatObj = S.cats.find(c => c.id === S.currentCat);
+    const isYouTube = activeCatObj && activeCatObj.label.toLowerCase() === 'youtube';
+
+    if (isYouTube) {
+      renderYtGrid();
+      return;
+    }
+
+    const el = document.getElementById('list-content');
+    const arts = visibleArticles();
+
+    if (!arts.length) {
+      el.innerHTML = `<div class="empty">No articles found.</div>`;
+      return;
+    }
+
+    let html = arts.map(a => {
+      const isRead = S.readSet.has(a.id);
+      return `
+        <div class="article-card ${isRead ? 'read' : ''}" onclick="toggleRead('${a.id}')">
+          <div class="card-title">${esc(a.title)}</div>
+          <div class="card-meta">
+            <span class="card-feed">${esc(a.origin ? a.origin.title : 'Unknown')}</span>
+            ${!isRead ? '<div class="unread-dot"></div>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Pagination Button
+    if (S.continuation) {
+      html += `
+        <div style="padding: 20px; text-align: center;">
+          <button id="load-more-btn" class="btn-primary" onclick="loadMoreArticles()" style="width: auto; padding: 10px 30px;">
+            Load More Pages (50)
+          </button>
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function renderYtGrid() {
+    const el = document.getElementById('yt-list-content');
+    const arts = visibleArticles();
+
+    if (!arts.length) {
+      el.innerHTML = `<div class="empty">No videos found.</div>`;
+      return;
+    }
+
+    let html = arts.map(a => {
+      const isRead = S.readSet.has(a.id);
+      // Try to extract thumbnail
+      let thumb = '';
+      const match = a.summary?.content?.match(/src="([^"]+)"/);
+      if (match) thumb = match[1];
+
+      return `
+        <div class="yt-card ${isRead ? 'read' : ''}" onclick="toggleRead('${a.id}')">
+          <div class="yt-thumb-wrap">
+            <img src="${esc(thumb)}" />
+            ${!isRead ? '<div class="unread-dot" style="position:absolute; top:8px; right:8px; z-index:10;"></div>' : ''}
+          </div>
+          <div class="yt-card-info">
+            <div class="yt-card-meta">
+              <div class="yt-card-title">${esc(a.title)}</div>
+              <div class="yt-card-sub">${esc(a.author || a.origin?.title)}</div>
+              <button class="yt-hide-btn" onclick="event.stopPropagation(); hideChannel('${esc(a.author)}')">Hide Channel</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Pagination Button
+    if (S.continuation) {
+      html += `
+        <div style="padding: 20px; text-align: center; grid-column: 1 / -1;">
+          <button id="load-more-btn" class="btn-primary" onclick="loadMoreArticles()" style="width: auto; padding: 10px 30px; background: #333; color: #fff;">
+            Load More Videos
+          </button>
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function toggleRead(id) {
+    if (S.readSet.has(id)) {
+      S.readSet.delete(id);
+      // In real app, make API call to unmark read
+    } else {
+      S.readSet.add(id);
+      // In real app, make API call to mark read
+    }
+    renderArticleList();
+  }
+
+  function markAllRead() {
+    const arts = visibleArticles();
+    arts.forEach(a => S.readSet.add(a.id));
+    // In real app, make API call to mark all read
+    renderArticleList();
+    toast('Marked all as read');
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // CHANNEL HIDING LOGIC
+  // ═══════════════════════════════════════════════════════════
+  function hideChannel(author) {
+    if (!author) return;
+    S.hiddenChannels.add(author);
+    saveHiddenChannels();
+    toast(`Channel ${author} hidden`);
+    renderArticleList(); // Re-render feeds to remove channel immediately
+    renderHiddenChannelsList();
+  }
+
+  function unhideChannel(author) {
+    S.hiddenChannels.delete(author);
+    saveHiddenChannels();
+    toast(`Channel ${author} restored`);
+    renderArticleList();
+    renderHiddenChannelsList();
+  }
+
+  function saveHiddenChannels() {
+    localStorage.setItem('fr_hidden_channels', JSON.stringify([...S.hiddenChannels]));
+  }
+
+  function loadHiddenChannels() {
+    try {
+      const data = localStorage.getItem('fr_hidden_channels');
+      if (data) S.hiddenChannels = new Set(JSON.parse(data));
+    } catch(e) {}
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SETTINGS
+  // ═══════════════════════════════════════════════════════════
+  function openSettings() {
+    document.getElementById('settings-overlay').classList.add('open');
+    renderHiddenChannelsList();
+  }
+  
+  function closeSettings() {
+    document.getElementById('settings-overlay').classList.remove('open');
+  }
+
+  function renderHiddenChannelsList() {
+    const container = document.getElementById('hidden-ch-list');
+    if (!S.hiddenChannels.size) {
+      container.innerHTML = '<div style="font-size:.82rem;color:var(--text3)">No channels hidden yet. Use the "Hide Channel" button on any video.</div>';
+      return;
+    }
+    container.innerHTML = [...S.hiddenChannels].map(key => `
+      <div class="hidden-ch-item">
+        <span>${esc(key)}</span>
+        <button onclick="unhideChannel('${esc(key)}')">Unhide</button>
+      </div>
+    `).join('');
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // AUTH / BOOTSTRAP
+  // ═══════════════════════════════════════════════════════════
+
+
+  async function login() {
+    let srv = document.getElementById('srv').value.trim().replace(/\/$/, '');
+    const usr = document.getElementById('usr').value.trim();
+    const pwd = document.getElementById('pwd').value;
+    const err = document.getElementById('login-err');
+    
+    if (!srv || !usr || !pwd) {
+      err.innerText = "Please fill all fields";
+      err.style.display = 'block';
+      return;
+    }
+
+    // Auto-append the greader API endpoint if missing
+    if (!srv.endsWith('/api/greader.php')) {
+      srv += '/api/greader.php';
+    }
+
+    try {
+      // The Google Reader API uses /accounts/ClientLogin
+      const url = srv + '/accounts/ClientLogin?Email=' + encodeURIComponent(usr) + '&Passwd=' + encodeURIComponent(pwd);
+      const res = await fetch(url);
+      const text = await res.text();
+      
+      if (text.includes('Auth=')) {
+        const authMatch = text.match(/Auth=([^\n]+)/);
+        if (authMatch) {
+          S.auth = authMatch[1];
+          S.server = srv; // Save the properly formatted URL
+          S.user = usr;
+          localStorage.setItem('fr_server', srv);
+          localStorage.setItem('fr_auth', S.auth);
+          localStorage.setItem('fr_user', usr);
+          err.style.display = 'none';
+          loadApp();
         }
       } else {
-        window._shortsPlaying.delete(idx);
-        pauseSlideAt(idx);
+        throw new Error('Invalid credentials');
       }
-    });
-  },{root:slidesEl,threshold:0.6});
-  slidesEl.querySelectorAll('.short-slide').forEach(el=>window._shortsObs.observe(el));
-}
-
-document.getElementById('shorts-slides').addEventListener('wheel',e=>{
-  e.preventDefault();
-  const el=document.getElementById('shorts-slides');
-  el.scrollBy({top:e.deltaY>0?window.innerHeight:-window.innerHeight,behavior:'smooth'});
-},{passive:false});
-
-function toggleShortStar(i){
-  const a=S.shortsArticles[i]; if(!a) return;
-  const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
-  if(starred) S.starSet.delete(a.id); else S.starSet.add(a.id);
-  const action=document.querySelector(`#ss-${i} .short-action svg`);
-  if(action){ action.setAttribute('fill',S.starSet.has(a.id)?'#f59e0b':'none'); action.setAttribute('stroke',S.starSet.has(a.id)?'#f59e0b':'white'); }
-  const span=document.querySelector(`#ss-${i} .short-action span`);
-  if(span) span.textContent=S.starSet.has(a.id)?'Saved':'Save';
-  toast(starred?'Unstarred':'Saved ★');
-}
-
-// ═══════════════════════════════════════════════════════════
-// SANITIZE HTML (all content served from FreshRSS cache, no external fetches)
-// ═══════════════════════════════════════════════════════════
-function sanitize(html){
-  const tmp=document.createElement('div');
-  tmp.innerHTML=html;
-  tmp.querySelectorAll('script,form,style,link,meta,base').forEach(el=>el.remove());
-  tmp.querySelectorAll('iframe').forEach(el=>{
-    const src=el.getAttribute('src')||'';
-    const ok=['youtube.com','youtube-nocookie.com','youtu.be','twitch.tv','player.twitch.tv','clips.twitch.tv','tiktok.com'];
-    if(ok.some(d=>src.includes(d))){
-      el.setAttribute('loading','lazy'); el.setAttribute('allowfullscreen','');
-      const ytId=extractYtId(src);
-      if(ytId){
-        const wrap=document.createElement('div');
-        wrap.innerHTML=ytPosterHtml(ytId);
-        el.parentNode.replaceChild(wrap.firstElementChild,el);
-        return;
-      }
-      if(!el.closest('.vid-ratio')){
-        const wrap=document.createElement('div'); wrap.className='vid-wrap';
-        const ratio=document.createElement('div'); ratio.className='vid-ratio';
-        el.parentNode.insertBefore(wrap,el); wrap.appendChild(ratio); ratio.appendChild(el);
-      }
-    } else { el.remove(); }
-  });
-  tmp.querySelectorAll('video').forEach(el=>{
-    el.setAttribute('controls',''); el.setAttribute('playsinline',''); el.setAttribute('preload','metadata');
-    el.removeAttribute('crossorigin');
-    el.style.cssText='width:100%;max-height:72vh;display:block;background:#000;border-radius:8px;';
-    if(!el.closest('.vid-wrap')){
-      const wrap=document.createElement('div'); wrap.className='vid-wrap';
-      el.parentNode.insertBefore(wrap,el); wrap.appendChild(el);
-    }
-  });
-  tmp.querySelectorAll('audio').forEach(el=>{
-    el.setAttribute('preload','metadata'); el.removeAttribute('crossorigin');
-  });
-  tmp.querySelectorAll('*').forEach(el=>{
-    [...el.attributes].forEach(attr=>{
-      if(attr.name.startsWith('on')) el.removeAttribute(attr.name);
-      if(attr.name==='href'&&attr.value.trim().toLowerCase().startsWith('javascript')) el.removeAttribute('href');
-    });
-    if(el.tagName==='A'){ el.setAttribute('target','_blank'); el.setAttribute('rel','noopener noreferrer'); }
-  });
-  tmp.querySelectorAll('img').forEach(el=>{
-    el.setAttribute('loading','lazy');
-    el.setAttribute('onerror',"this.classList.add('img-err')");
-    el.removeAttribute('width'); el.removeAttribute('height');
-    if(!el.style.cssText.includes('absolute')) el.style.cssText='';
-  });
-  return tmp.innerHTML;
-}
-function ytPosterHtml(id){
-  return `<div class="vid-label"><span>▶ YouTube</span></div>
-  <div class="vid-wrap yt-poster" id="ytp-${id}" onclick="launchYt('${id}','ytp-${id}')">
-    <div class="vid-ratio" style="background:#000">
-      <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0;margin:0" onerror="this.style.display='none'"/>
-      <div class="yt-poster-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="8,5 19,12 8,19"/></svg></div></div>
-    </div>
-  </div>`;
-}
-
-// ═══════════════════════════════════════════════════════════
-// REFRESH
-// ═══════════════════════════════════════════════════════════
-async function refreshAll(){
-  const btn=document.getElementById('refresh-btn');
-  if(btn){ const svg=btn.querySelector('svg'); if(svg) svg.classList.add('spin'); btn.disabled=true; }
-  try{
-    await Promise.all([loadCategories(), loadUnreadCounts()]);
-    const label=currentCatLabel();
-    if(S.currentCat!=='__all__'&&isShortsMode(label)) await loadShortsMode();
-    else if(S.currentCat!=='__all__'&&isYoutubeMode(label)) await loadYoutubeMode();
-    else await loadArticles();
-    renderCatTabs();
-    toast('Refreshed');
-  }finally{
-    if(btn){ const svg=btn.querySelector('svg'); if(svg) svg.classList.remove('spin'); btn.disabled=false; }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════════════════════
-function openSettings(){
-  document.getElementById('settings-user').textContent=`${S.user} @ ${S.server}`;
-  document.getElementById('cache-days-sel').value=String(S.cacheDays);
-  renderCatFilterList();
-  renderHiddenChannelsList();
-  document.getElementById('settings-overlay').classList.add('open');
-}
-function closeSettingsOutside(e){ if(e.target===document.getElementById('settings-overlay')) document.getElementById('settings-overlay').classList.remove('open'); }
-
-function renderCatFilterList(){
-  const container=document.getElementById('cat-filter-list');
-  if(!S.cats.length){ container.innerHTML='<div style="font-size:.82rem;color:var(--text3)">No categories loaded yet.</div>'; return; }
-  container.innerHTML=S.cats.map(c=>{
-    const checked=!S.excludedCatIds.has(c.id);
-    return `<label class="cat-checkbox-item">
-      <input type="checkbox" ${checked?'checked':''} onchange="toggleCatFilter('${esc(c.id)}',this.checked)"/>
-      <span>${esc(c.label)}</span>
-    </label>`;
-  }).join('');
-}
-function toggleCatFilter(catId, include){
-  if(include) S.excludedCatIds.delete(catId);
-  else S.excludedCatIds.add(catId);
-  saveExcludedCats();
-}
-
-function renderHiddenChannelsList(){
-  const container=document.getElementById('hidden-ch-list');
-  if(!S.hiddenChannels.size){ container.innerHTML='<div style="font-size:.82rem;color:var(--text3)">No channels hidden yet. Use the "Hide channel" button on any YouTube/Shorts card.</div>'; return; }
-  container.innerHTML=[...S.hiddenChannels].map(key=>`
-    <div class="hidden-ch-item">
-      <span>${esc(key)}</span>
-      <button onclick="unhideChannel('${esc(key)}')">Restore</button>
-    </div>`).join('');
-}
-
-async function clearArticleCache(){
-  if(!confirm('Delete cached articles and re-fetch?')) return;
-  const starredBackup={};
-  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starredBackup[id]=S.cachedArticles[id]; }
-  S.cachedArticles={}; localStorage.removeItem(DB_KEY);
-  Object.assign(S.cachedArticles,starredBackup); persistArticles();
-  document.getElementById('settings-overlay').classList.remove('open');
-  toast('Cache cleared — reloading…');
-  await sleep(500);
-  await loadArticles();
-}
-async function clearAllAndReload(){
-  if(!confirm('Reset entire app? This will reload the page.')) return;
-  try{
-    if('caches' in window){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
-    if('serviceWorker' in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); }
-    localStorage.clear();
-  }catch(e){}
-  window.location.reload(true);
-}
-
-// ═══════════════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════════════
-function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function stripTags(html){ const t=document.createElement('div'); t.innerHTML=html; return t.textContent||t.innerText||''; }
-function firstImg(html){
-  const t=document.createElement('div'); t.innerHTML=html;
-  for(const img of t.querySelectorAll('img')){
-    const src=img.getAttribute('src')||'';
-    if(src&&!src.includes('i.ytimg.com')&&!src.includes('img.youtube.com')) return src;
-  }
-  return null;
-}
-function extractYtId(text){
-  const m=text.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-  return m?m[1]:null;
-}
-function fmtDate(ts){
-  const d=new Date(ts), now=new Date(), diff=(now-d)/1000;
-  if(diff<60) return 'just now';
-  if(diff<3600) return `${Math.floor(diff/60)}m ago`;
-  if(diff<86400) return `${Math.floor(diff/3600)}h ago`;
-  if(diff<604800) return `${Math.floor(diff/86400)}d ago`;
-  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-}
-function skelHtml(n){ return Array(n).fill(0).map(()=>`<div class="article-card skel"><div class="skel-line" style="width:40%;height:9px"></div><div class="skel-line" style="height:16px;margin-top:7px"></div><div class="skel-line" style="width:80%;height:16px"></div><div class="skel-line" style="height:11px"></div></div>`).join(''); }
-function ytSkelHtml(n){ return Array(n).fill(0).map(()=>`<div class="yt-card skel" style="border-color:#272727"><div class="yt-thumb-wrap" style="background:#1a1a1a"></div><div class="yt-card-info"><div class="yt-channel-icon" style="background:#222"></div><div class="yt-card-meta"><div class="skel-line" style="height:12px;background:#222"></div><div class="skel-line" style="height:10px;width:60%;background:#222"></div></div></div></div>`).join(''); }
-
-// ═══════════════════════════════════════════════════════════
-// SERVICE WORKER
-// ═══════════════════════════════════════════════════════════
-if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
-
-window.addEventListener('online', async()=>{
-  showOfflineBanner(false);
-  toast('Back online — refreshing…');
-  if(S.auth){ try{ await Promise.all([loadCategories(), loadUnreadCounts()]); await loadArticles(); }catch(e){ showOfflineBanner(true); } }
-});
-window.addEventListener('offline',()=>{ showOfflineBanner(true); });
-if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
-
-// ═══════════════════════════════════════════════════════════
-// AUTO LOGIN
-// ═══════════════════════════════════════════════════════════
-loadCacheDays();
-loadExcludedCats();
-loadHiddenChannels();
-(async function(){
-  const srv=localStorage.getItem('fr_server');
-  const auth=localStorage.getItem('fr_auth');
-  const user=localStorage.getItem('fr_user')||'';
-  if(srv&&auth){
-    S.server=srv; S.auth=auth; S.user=user;
-    document.getElementById('srv').value=srv;
-    try{
-      await loadApp();
-    }catch(e){
-      const msg=(e.message||'').toLowerCase();
-      const isAuthError=msg.includes('401')||msg.includes('403')||msg.includes('invalid')||msg.includes('unauthorized');
-      if(isAuthError){ clearSession(); showScreen('login-screen'); }
-      else {
-        showScreen('app-screen');
-        loadPersistedArticles(); loadStarredArticles();
-        showOfflineBanner(true);
-        renderFromCache();
-      }
+    } catch(e) {
+      err.innerText = "Login failed. Check URL and credentials.";
+      err.style.display = 'block';
     }
   }
-})();
+  // Init
+  loadHiddenChannels();
+  if (localStorage.getItem('fr_auth')) {
+    S.server = localStorage.getItem('fr_server');
+    S.auth = localStorage.getItem('fr_auth');
+    S.user = localStorage.getItem('fr_user');
+    loadApp();
+  }
 </script>
 </body>
 </html>
