@@ -413,13 +413,13 @@
   <div class="feed-bar hidden" id="feed-bar"></div>
   <div class="filter-bar">
     <div class="filter-pills">
-      <button class="filter-btn active" id="f-all" onclick="setFilter('all')">All</button>
-      <button class="filter-btn" id="f-unread" onclick="setFilter('unread')">Unread</button>
+      <button class="filter-btn" id="f-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn active" id="f-unread" onclick="setFilter('unread')">Unread</button>
       <button class="filter-btn" id="f-starred" onclick="setFilter('starred')">Starred</button>
     </div>
     <button class="mark-all-btn" onclick="markAllRead()">Mark all read</button>
   </div>
-  <div class="article-list"><div id="list-content"></div></div>
+  <div class="article-list"><div id="list-content"></div><div id="load-more-wrap" style="padding:16px;text-align:center;display:none"><button id="load-more-btn" onclick="loadMoreArticles()" style="padding:10px 28px;background:var(--accent-bg);color:var(--accent);border:1.5px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:100px;font-size:.85rem;font-weight:700;cursor:pointer">Load more</button></div></div>
 </div>
 
 <!-- ══ READER ══════════════════════════════ -->
@@ -477,15 +477,21 @@
       onkeydown="if(event.key==='Enter') ytSearch()"/>
     <button onclick="ytSearch()" style="padding:8px 14px;background:#c00;color:#fff;border-radius:20px;font-size:.8rem;font-weight:700;flex-shrink:0">Go</button>
   </div>
-  <div class="filter-bar" style="background:#0f0f0f;border-color:#272727">
+  <div class="filter-bar" style="background:#0f0f0f;border-color:#272727;flex-direction:column;gap:6px;padding-top:8px;padding-bottom:8px">
+    <!-- Sub-filter: Videos / Shorts / Hidden Channels -->
+    <div style="display:flex;gap:5px;width:100%">
+      <button id="ysf-videos" class="feed-tab active" onclick="setYtSubFilter('videos')" style="background:#c00;color:#fff;border-color:#c00;font-size:.75rem">▶ Videos</button>
+      <button id="ysf-shorts" class="feed-tab" onclick="setYtSubFilterShorts()" style="background:transparent;color:#aaa;border-color:#444;font-size:.75rem">⚡ Shorts</button>
+      <button id="ysf-hiddench" class="feed-tab" onclick="setYtSubFilter('hiddench')" style="background:transparent;color:#aaa;border-color:#444;font-size:.75rem">🚫 Hidden Channels</button>
+    </div>
+    <!-- Read filter -->
     <div class="filter-pills">
-      <button class="filter-btn active" id="yf-all" onclick="setYtFilter('all')" style="color:#aaa;border-color:#444">All</button>
-      <button class="filter-btn" id="yf-unread" onclick="setYtFilter('unread')" style="color:#aaa;border-color:#444">Unread</button>
+      <button class="filter-btn" id="yf-all" onclick="setYtFilter('all')" style="color:#aaa;border-color:#444">All</button>
+      <button class="filter-btn active" id="yf-unread" onclick="setYtFilter('unread')" style="color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,transparent)">Unread</button>
       <button class="filter-btn" id="yf-starred" onclick="setYtFilter('starred')" style="color:#aaa;border-color:#444">Starred</button>
-      <button class="filter-btn" id="yf-hidden" onclick="setYtFilter('hidden')" style="color:#aaa;border-color:#444">Hidden</button>
     </div>
   </div>
-  <div class="article-list" style="background:#0f0f0f"><div class="yt-grid" id="yt-grid"></div></div>
+  <div class="article-list" style="background:#0f0f0f"><div class="yt-grid" id="yt-grid"></div><div id="yt-load-more-wrap" style="padding:16px;text-align:center;display:none"><button onclick="loadMoreYt()" style="padding:10px 28px;background:#1a1a1a;color:#aaa;border:1.5px solid #444;border-radius:100px;font-size:.85rem;font-weight:700;cursor:pointer">Load more</button></div></div>
 </div>
 
 <!-- ══ YOUTUBE READER ══════════════════════ -->
@@ -524,8 +530,8 @@
   <div class="feed-bar hidden" id="shorts-feed-bar" style="background:#1a1a1a;border-color:#333"></div>
   <div class="filter-bar" style="background:#111;border-color:#333">
     <div class="filter-pills">
-      <button class="filter-btn active" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
-      <button class="filter-btn" id="sf-unread" onclick="setShortsFilter('unread')" style="color:#aaa;border-color:#333">Unread</button>
+      <button class="filter-btn" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
+      <button class="filter-btn active" id="sf-unread" onclick="setShortsFilter('unread')" style="color:#aaa;border-color:#333">Unread</button>
       <button class="filter-btn" id="sf-starred" onclick="setShortsFilter('starred')" style="color:#aaa;border-color:#333">Starred</button>
       <button class="filter-btn" id="sf-hidden" onclick="setShortsFilter('hidden')" style="color:#aaa;border-color:#333">Hidden</button>
     </div>
@@ -605,11 +611,16 @@ const S = {
   articles:[],
   cachedArticles:{},
   currentCat:'__all__', currentFeed:null,
-  filter:'all',
+  filter:'unread',
   readSet:new Set(), starSet:new Set(),
   curIdx:-1, curArticle:null,
-  ytArticles:[], ytFilter:'all', ytCurIdx:-1, ytCurArticle:null,
-  shortsArticles:[], shortsFilter:'all', shortsPlayerIdx:0,
+  // Unified YouTube state — ytSubFilter: 'videos'|'shorts'|'hidden'
+  ytArticles:[], ytFilter:'unread', ytSubFilter:'videos', ytCurIdx:-1, ytCurArticle:null,
+  // ytCatIds: the merged set of category IDs that are youtube OR shorts
+  ytCatIds: new Set(), shortsCatIds: new Set(),
+  // pagination
+  articleContinuation: null, ytContinuation: null,
+  shortsArticles:[], shortsFilter:'unread', shortsPlayerIdx:0,
   unreadMap:{},
   cacheDays:7,
   // category IDs to exclude from All feed (user-configured)
@@ -622,9 +633,32 @@ const SHORTS_KEYWORDS = ['shorts','tiktok','short'];
 const YOUTUBE_KEYWORDS = ['youtube','yt','videos'];
 function isShortsMode(label){ return SHORTS_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
 function isYoutubeMode(label){ return YOUTUBE_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
+// A category is "YouTube-family" if it's either YouTube or Shorts
+function isYoutubeFamily(label){ return isYoutubeMode(label)||isShortsMode(label); }
 function currentCatLabel(){
   const c = S.cats.find(c=>c.id===S.currentCat);
   return c?c.label:'';
+}
+// Build a virtual merged YouTube category from all youtube+shorts cats
+function buildVirtualYtCat(){
+  const ytCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  if(!ytCats.length) return null;
+  const feeds=[];
+  const seenFeedIds=new Set();
+  ytCats.forEach(c=>c.feeds.forEach(f=>{ if(!seenFeedIds.has(f.id)){ seenFeedIds.add(f.id); feeds.push({...f,_fromCat:c.id,_isShortsCat:isShortsMode(c.label)}); } }));
+  return {id:'__youtube_merged__',label:'YouTube',feeds,_sourceIds:ytCats.map(c=>c.id)};
+}
+// Check if an article is a Short (url contains /shorts/ or is from a shorts category)
+function isArticleShort(a){
+  const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
+  if(url.includes('/shorts/')) return true;
+  // Check if the feed is from a shorts-named category
+  const feedId=a.origin?.streamId;
+  if(feedId){
+    const cat=S.cats.find(c=>c.feeds.some(f=>f.id===feedId));
+    if(cat && isShortsMode(cat.label)) return true;
+  }
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -673,7 +707,7 @@ function hideChannel(name){
   if(!key) return;
   S.hiddenChannels.add(key);
   saveHiddenChannels();
-  toast('Channel hidden — use "Hidden" filter to see it');
+  toast('Channel hidden — switch to "Hidden Channels" tab to see it');
   renderYtGrid();
   renderHiddenChannelsList();
 }
@@ -893,11 +927,27 @@ function renderCatTabs(){
   const bar=document.getElementById('cat-bar');
   const allU=S.unreadMap['user/-/state/com.google/reading-list']||0;
   let h=`<button class="cat-tab ${S.currentCat==='__all__'?'active':''}" onclick="selectCat('__all__')">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  S.cats.forEach((c,i)=>{
+  // Build merged YouTube tab if any yt/shorts cats exist
+  const ytCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  const nonYtCats=S.cats.filter(c=>!isYoutubeFamily(c.label));
+  if(ytCats.length){
+    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0);
+    const ytActive=ytCats.some(c=>c.id===S.currentCat)||S.currentCat==='__youtube_merged__';
+    h+=`<button class="cat-tab ${ytActive?'active':''}" onclick="selectYoutubeMerged()">▶ YouTube${ytU?` <span class="badge">${ytU}</span>`:''}</button>`;
+  }
+  nonYtCats.forEach((c,_)=>{
+    const realIdx=S.cats.indexOf(c);
     const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    h+=`<button class="cat-tab ${S.currentCat===c.id?'active':''}" onclick="selectCatByIdx(${i})">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
+    h+=`<button class="cat-tab ${S.currentCat===c.id?'active':''}" onclick="selectCatByIdx(${realIdx})">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
   });
   bar.innerHTML=h;
+}
+function selectYoutubeMerged(){
+  stopAllMedia();
+  S.currentCat='__youtube_merged__';
+  S.currentFeed=null;
+  renderCatTabs();
+  loadUnifiedYoutubeMode();
 }
 function selectCatByIdx(i){ const c=window._catList&&window._catList[i]; if(c) selectCat(c.id); }
 function stopAllMedia(){
@@ -912,10 +962,18 @@ function selectCat(id){
   stopAllMedia();
   S.currentCat=id; S.currentFeed=null;
   renderCatTabs(); renderFeedBar();
+  // If this cat is yt/shorts family, use unified mode
   const label=currentCatLabel();
-  if(id!=='__all__'&&isShortsMode(label)){ loadShortsMode(); return; }
-  if(id!=='__all__'&&isYoutubeMode(label)){ loadYoutubeMode(); return; }
-  showScreen('app-screen'); loadArticles();
+  if(id!=='__all__' && id!=='__youtube_merged__' && isYoutubeFamily(label)){
+    S.currentCat='__youtube_merged__';
+    renderCatTabs();
+    loadUnifiedYoutubeMode();
+    return;
+  }
+  showScreen('app-screen');
+  S.filter='unread';
+  ['all','unread','starred'].forEach(x=>document.getElementById('f-'+x)?.classList.toggle('active',x==='unread'));
+  loadArticles();
 }
 function renderFeedBar(){
   const bar=document.getElementById('feed-bar');
@@ -943,9 +1001,14 @@ function setFilter(f){
 // ═══════════════════════════════════════════════════════════
 // LOAD ARTICLES (GReader)
 // ═══════════════════════════════════════════════════════════
-async function loadArticles(){
+async function loadArticles(appendMode=false){
   const el=document.getElementById('list-content');
-  el.innerHTML=skelHtml(5);
+  const loadMoreWrap=document.getElementById('load-more-wrap');
+  if(!appendMode){
+    el.innerHTML=skelHtml(5);
+    S.articleContinuation=null;
+    if(loadMoreWrap) loadMoreWrap.style.display='none';
+  }
   try{
     const params={n:50};
     let streamId;
@@ -955,8 +1018,10 @@ async function loadArticles(){
     if(S.filter==='unread') params.xt='user/-/state/com.google/read';
     else if(S.filter==='starred') streamId='user/-/state/com.google/starred';
     params.s=streamId;
+    if(appendMode && S.articleContinuation) params.c=S.articleContinuation;
     const data=await apiGet('/reader/api/0/stream/contents',params);
     let items=data.items||[];
+    S.articleContinuation=data.continuation||null;
     items.forEach(a=>{
       if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
       if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
@@ -965,11 +1030,8 @@ async function loadArticles(){
     // For __all__, exclude categories the user has hidden from the main feed
     if(S.currentCat==='__all__' && S.excludedCatIds.size>0 && S.filter!=='starred'){
       items=items.filter(a=>{
-        // GReader stream IDs for categories look like "user/-/label/CategoryName"
-        // The feed's origin.streamId is the feed URL stream id; we match via subscription categories
         const feedId=a.origin?.streamId;
         if(!feedId) return true;
-        // Find which cat this feed belongs to
         const cat=S.cats.find(c=>c.feeds.some(f=>f.id===feedId));
         if(!cat) return true;
         return !S.excludedCatIds.has(cat.id);
@@ -977,12 +1039,17 @@ async function loadArticles(){
     }
 
     cacheArticles(items);
-    S.articles=items;
+    if(appendMode) S.articles=[...S.articles,...items];
+    else S.articles=items;
     renderArticleList();
+
+    // Show/hide load more
+    if(loadMoreWrap) loadMoreWrap.style.display=S.articleContinuation?'block':'none';
   }catch(e){
     el.innerHTML=`<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load: ${esc(e.message)}</p></div>`;
   }
 }
+async function loadMoreArticles(){ await loadArticles(true); }
 
 function visibleArticles(){
   if(S.filter==='unread') return S.articles.filter(a=>!S.readSet.has(a.id));
@@ -1171,43 +1238,106 @@ async function markAllRead(){
 })();
 
 // ═══════════════════════════════════════════════════════════
-// YOUTUBE MODE
+// UNIFIED YOUTUBE MODE (merges YouTube + Shorts categories)
 // ═══════════════════════════════════════════════════════════
-async function loadYoutubeMode(){
+async function loadUnifiedYoutubeMode(appendMode=false){
   stopAllMedia();
   showScreen('yt-screen');
-  const label=currentCatLabel()||'YouTube';
   const titleEl=document.getElementById('yt-screen-title');
-  if(titleEl) titleEl.textContent='▶ '+label;
-  const grid=document.getElementById('yt-grid');
+  if(titleEl) titleEl.textContent='▶ YouTube';
+  // Build the cat bar in yt-screen
   const catBar=document.getElementById('yt-cat-bar');
-  const allU=Object.values(S.unreadMap).reduce((s,n)=>s+n,0);
   let h=`<button class="cat-tab" onclick="selectCat('__all__')" style="color:#aaa;border-color:transparent">All</button>`;
-  S.cats.forEach((c,i)=>{
+  // Show single merged YouTube tab + non-yt cats
+  const ytCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  const nonYtCats=S.cats.filter(c=>!isYoutubeFamily(c.label));
+  if(ytCats.length){
+    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0);
+    h+=`<button class="cat-tab active" onclick="selectYoutubeMerged()" style="background:var(--accent-bg);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,transparent)">▶ YouTube${ytU?` <span class="badge">${ytU}</span>`:''}</button>`;
+  }
+  nonYtCats.forEach(c=>{
+    const realIdx=S.cats.indexOf(c);
     const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    const active=S.currentCat===c.id;
-    h+=`<button class="cat-tab ${active?'active':''}" onclick="selectCatByIdx(${i})" style="${active?'':'color:#aaa;border-color:transparent'}">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
+    h+=`<button class="cat-tab" onclick="selectCatByIdx(${realIdx})" style="color:#aaa;border-color:transparent">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
   });
   catBar.innerHTML=h;
-  grid.innerHTML=ytSkelHtml(6);
+
+  const grid=document.getElementById('yt-grid');
+  if(!appendMode){
+    grid.innerHTML=ytSkelHtml(6);
+    S.ytContinuation=null;
+  }
+  // Collect stream IDs from all yt+shorts categories
+  const allYtCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  if(!allYtCats.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No YouTube categories found</p></div>'; return; }
   try{
-    const params={n:50,s:S.currentCat};
-    const data=await apiGet('/reader/api/0/stream/contents',params);
-    const items=data.items||[];
-    items.forEach(a=>{
-      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+    // Fetch from each category and merge
+    let allItems=[];
+    let continuation=null;
+    // For simplicity, fetch from all youtube cats combined into the first one's stream
+    // Use multiple fetches if multiple cats
+    const fetchPromises=allYtCats.map(async c=>{
+      const params={n:50};
+      if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
+      else if(S.ytFilter==='starred') return {items:[],continuation:null};
+      params.s=c.id;
+      if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
+      const data=await apiGet('/reader/api/0/stream/contents',params);
+      if(data.continuation) continuation=data.continuation;
+      return data;
     });
-    cacheArticles(items);
-    S.ytArticles=items;
+    let fetched;
+    if(S.ytFilter==='starred'){
+      const data=await apiGet('/reader/api/0/stream/contents',{n:50,s:'user/-/state/com.google/starred',...(appendMode&&S.ytContinuation?{c:S.ytContinuation}:{})});
+      if(data.continuation) continuation=data.continuation;
+      fetched=[data];
+    } else {
+      fetched=await Promise.all(fetchPromises);
+    }
+    fetched.forEach(data=>{
+      (data.items||[]).forEach(a=>{
+        if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+        if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
+        allItems.push(a);
+      });
+    });
+    S.ytContinuation=continuation;
+    // Sort merged by published desc
+    allItems.sort((a,b)=>(b.published||0)-(a.published||0));
+    cacheArticles(allItems);
+    if(appendMode) S.ytArticles=[...S.ytArticles,...allItems];
+    else S.ytArticles=allItems;
     renderYtGrid();
+    const wrap=document.getElementById('yt-load-more-wrap');
+    if(wrap) wrap.style.display=S.ytContinuation?'block':'none';
   }catch(e){ grid.innerHTML=`<div class="empty" style="color:#aaa"><p>${esc(e.message)}</p></div>`; }
+}
+async function loadMoreYt(){ await loadUnifiedYoutubeMode(true); }
+
+function setYtSubFilter(f){
+  S.ytSubFilter=f;
+  ['videos','shorts','hiddench'].forEach(x=>{
+    const btn=document.getElementById('ysf-'+x);
+    if(!btn) return;
+    const active=x===f;
+    btn.style.background=active?(x==='videos'?'#c00':x==='shorts'?'#4a9':'#555'):'transparent';
+    btn.style.color=active?'#fff':'#aaa';
+    btn.style.borderColor=active?(x==='videos'?'#c00':x==='shorts'?'#4a9':'#555'):'#444';
+  });
+  renderYtGrid();
+}
+
+function setYtSubFilterShorts(){
+  setYtSubFilter('shorts');
+  // Open the fullscreen swipe gallery for shorts
+  openShortsFromYt();
 }
 
 function setYtFilter(f){
   S.ytFilter=f;
-  ['all','unread','starred','hidden'].forEach(x=>{
+  ['all','unread','starred'].forEach(x=>{
     const btn=document.getElementById('yf-'+x);
-    if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; }
+    if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; btn.style.borderColor=x===f?'color-mix(in srgb,var(--accent) 30%,transparent)':'#444'; }
   });
   renderYtGrid();
 }
@@ -1215,24 +1345,47 @@ function setYtFilter(f){
 function renderYtGrid(){
   const grid=document.getElementById('yt-grid');
   let arts=S.ytArticles;
-  if(S.ytFilter==='unread')  arts=arts.filter(a=>!S.readSet.has(a.id)&&!isChannelHidden(a));
-  else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
-  else if(S.ytFilter==='hidden') arts=arts.filter(a=>isChannelHidden(a));
-  else arts=arts.filter(a=>!isChannelHidden(a)); // 'all' hides hidden channels
-  if(!arts.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No videos</p></div>'; return; }
+
+  // First apply sub-filter (videos / shorts / hidden channels)
+  const subF=S.ytSubFilter||'videos';
+  if(subF==='hiddench'){
+    arts=arts.filter(a=>isChannelHidden(a));
+  } else if(subF==='shorts'){
+    arts=arts.filter(a=>isArticleShort(a)&&!isChannelHidden(a));
+  } else {
+    // videos: non-shorts, non-hidden
+    arts=arts.filter(a=>!isArticleShort(a)&&!isChannelHidden(a));
+  }
+
+  // Then apply read-state filter (only meaningful for videos/shorts, not hidden)
+  if(subF!=='hiddench'){
+    if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
+    else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
+  }
+
+  if(!arts.length){
+    const msg=subF==='hiddench'?'No hidden channels — use "Hide channel" on any video card':subF==='shorts'?'No Shorts':'No Videos';
+    grid.innerHTML=`<div class="empty" style="color:#aaa"><p>${msg}</p></div>`; return;
+  }
+
   grid.innerHTML=arts.map((a)=>{
     const trueIdx=S.ytArticles.indexOf(a);
     const raw=a.summary?.content||a.content?.content||'';
-    const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-    const thumb=ytId?`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`:firstImg(raw)||'';
+    const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
+    const ytId=extractYtId(url)||extractYtId(raw);
+    const isShort=isArticleShort(a);
+    // For shorts use portrait crop; for videos use landscape
+    const thumbQ=isShort?'mqdefault':'hqdefault';
+    const thumb=ytId?`https://i.ytimg.com/vi/${ytId}/${thumbQ}.jpg`:firstImg(raw)||'';
     const ch=a.origin?.title||a.author||'';
     const date=fmtDate(a.published*1000);
     const read=S.readSet.has(a.id);
     const starred=S.starSet.has(a.id);
     const hidden=isChannelHidden(a);
     return `<div class="yt-card" onclick="openYtArticle(${trueIdx})" style="${read?'opacity:.6':''}">
-      <div class="yt-thumb-wrap">
+      <div class="yt-thumb-wrap" style="${isShort?'padding-top:min(177.78%,340px)':''}">
         ${thumb?`<img src="${esc(thumb)}" loading="lazy" onerror="this.style.display='none'"/>`:'<div style="position:absolute;inset:0;background:#222;display:flex;align-items:center;justify-content:center;color:#555">▶</div>'}
+        ${isShort?'<div style="position:absolute;top:6px;left:7px;background:#ff0;color:#000;font-size:.6rem;font-weight:800;padding:1px 5px;border-radius:3px">⚡ SHORT</div>':''}
         ${!read?'<div style="position:absolute;top:8px;left:8px;width:8px;height:8px;background:#f87171;border-radius:50%"></div>':''}
         ${starred?'<div style="position:absolute;top:8px;right:8px;color:#f59e0b;font-size:.9rem;text-shadow:0 1px 2px rgba(0,0,0,.8)">★</div>':''}
       </div>
@@ -1241,9 +1394,12 @@ function renderYtGrid(){
         <div class="yt-card-meta">
           <div class="yt-card-title">${esc(a.title||'Untitled')}</div>
           <div class="yt-card-sub">${esc(ch)} · ${esc(date)}</div>
-          ${!hidden?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${esc(ch)}')">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="7 7 7 17 17 17"/></svg>
-            Hide channel</button>`:`<button class="yt-hide-btn" style="color:var(--accent)" onclick="event.stopPropagation();unhideChannel('${esc(channelKey(ch))}')">Restore</button>`}
+          ${!hidden
+            ?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${esc(ch)}')">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="7 7 7 17 17 17"/></svg>
+                Hide channel</button>`
+            :`<button class="yt-hide-btn" style="color:#f59e0b;border-color:#f59e0b" onclick="event.stopPropagation();unhideChannel('${esc(channelKey(ch))}')">↩ Restore channel</button>`
+          }
         </div>
       </div>
     </div>`;
@@ -1323,61 +1479,58 @@ function launchYt(id, posterId){
 }
 
 // ═══════════════════════════════════════════════════════════
-// SHORTS / TIKTOK MODE
+// SHORTS PLAYER (launched from the Shorts sub-filter in YouTube mode)
+// Draws from S.ytArticles filtered to shorts; full-screen swipe player
 // ═══════════════════════════════════════════════════════════
-async function loadShortsMode(){
+function openShortsFromYt(){
+  // Populate shortsArticles from the merged ytArticles, shorts only, respecting hidden
+  let arts=S.ytArticles.filter(a=>isArticleShort(a)&&!isChannelHidden(a));
+  if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
+  else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
+  S.shortsArticles=arts;
   stopAllMedia();
   showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent=currentCatLabel()||'Shorts';
+  document.getElementById('shorts-title').textContent='Shorts';
   renderShortsCatBar();
-  renderShortsFeedBar();
+  renderShortsGallery();
+}
+async function loadShortsMode(){
+  // Kept for backward compat — just redirect to openShortsFromYt if we have data
+  if(S.ytArticles.length){ openShortsFromYt(); return; }
+  // Otherwise fetch
+  stopAllMedia();
+  showScreen('shorts-screen');
+  document.getElementById('shorts-title').textContent='Shorts';
+  renderShortsCatBar();
   const gallery=document.getElementById('shorts-gallery');
   gallery.innerHTML='<div style="padding:60px 20px;text-align:center;color:#666">Loading…</div>';
   try{
-    const params={n:50};
-    let streamId=S.currentFeed||S.currentCat;
-    if(S.shortsFilter==='unread') params.xt='user/-/state/com.google/read';
-    else if(S.shortsFilter==='starred') streamId='user/-/state/com.google/starred';
-    params.s=streamId;
-    const data=await apiGet('/reader/api/0/stream/contents',params);
-    const items=data.items||[];
-    items.forEach(a=>{
-      if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
-      if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
-    });
-    cacheArticles(items);
-    S.shortsArticles=items;
-    renderShortsGallery();
+    const allYtCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+    if(!allYtCats.length){ gallery.innerHTML='<div style="padding:60px 20px;text-align:center;color:#666">No YouTube categories found</div>'; return; }
+    let allItems=[];
+    await Promise.all(allYtCats.map(async c=>{
+      const params={n:50,s:c.id};
+      if(S.shortsFilter==='unread') params.xt='user/-/state/com.google/read';
+      const data=await apiGet('/reader/api/0/stream/contents',params);
+      (data.items||[]).forEach(a=>{
+        if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
+        if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
+        allItems.push(a);
+      });
+    }));
+    cacheArticles(allItems);
+    S.ytArticles=allItems;
+    openShortsFromYt();
   }catch(e){ gallery.innerHTML=`<div style="padding:60px 20px;text-align:center;color:#666">${esc(e.message)}</div>`; }
 }
-function exitShortsMode(){ stopAllMedia(); selectCat('__all__'); }
+function exitShortsMode(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(); }
 
 function renderShortsCatBar(){
   const bar=document.getElementById('shorts-cat-bar'); if(!bar) return;
-  let h=`<button class="cat-tab" onclick="exitShortsMode()" style="color:#aaa;border-color:transparent">All</button>`;
-  S.cats.forEach((c,i)=>{
-    const u=c.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-    const active=S.currentCat===c.id;
-    h+=`<button class="cat-tab ${active?'active':''}" onclick="selectCatByIdx(${i})" style="${active?'':'color:#aaa;border-color:transparent'}">${esc(c.label)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
+  let h=`<button class="cat-tab" onclick="exitShortsMode()" style="color:#aaa;border-color:transparent">◀ YouTube</button>`;
   bar.innerHTML=h;
 }
-function renderShortsFeedBar(){
-  const bar=document.getElementById('shorts-feed-bar'); if(!bar) return;
-  const cat=S.cats.find(c=>c.id===S.currentCat);
-  if(!cat||cat.feeds.length<2){ bar.classList.add('hidden'); bar.innerHTML=''; return; }
-  bar.classList.remove('hidden');
-  window._feedBarFeeds=cat.feeds;
-  const allU=cat.feeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
-  let h=`<button class="feed-tab ${!S.currentFeed?'active':''}" onclick="selectShortsFeed(null)" style="${!S.currentFeed?'':'background:transparent;color:#aaa;border-color:#444'}">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  cat.feeds.forEach((f,i)=>{
-    const u=S.unreadMap[f.id]||0;
-    const active=S.currentFeed===f.id;
-    h+=`<button class="feed-tab ${active?'active':''}" onclick="selectShortsFeedByIdx(${i})" style="${active?'':'background:transparent;color:#aaa;border-color:#444'}">${esc(f.title||f.id)}${u?` <span class="badge">${u}</span>`:''}</button>`;
-  });
-  bar.innerHTML=h;
-}
-function selectShortsFeed(id){ S.currentFeed=id; loadShortsMode(); }
+function selectShortsFeed(id){ S.currentFeed=id; openShortsFromYt(); }
 function selectShortsFeedByIdx(i){ const f=window._feedBarFeeds&&window._feedBarFeeds[i]; if(f) selectShortsFeed(f.id); }
 function setShortsFilter(f){
   S.shortsFilter=f;
@@ -1385,7 +1538,14 @@ function setShortsFilter(f){
     const btn=document.getElementById('sf-'+x);
     if(btn) btn.classList.toggle('active',x===f);
   });
-  loadShortsMode();
+  // Re-filter from ytArticles
+  let arts=S.ytArticles.filter(a=>isArticleShort(a));
+  if(f==='unread') arts=arts.filter(a=>!S.readSet.has(a.id)&&!isChannelHidden(a));
+  else if(f==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
+  else if(f==='hidden') arts=arts.filter(a=>isChannelHidden(a));
+  else arts=arts.filter(a=>!isChannelHidden(a));
+  S.shortsArticles=arts;
+  renderShortsGallery();
 }
 
 function renderShortsGallery(){
@@ -1688,9 +1848,7 @@ async function refreshAll(){
   if(btn){ const svg=btn.querySelector('svg'); if(svg) svg.classList.add('spin'); btn.disabled=true; }
   try{
     await Promise.all([loadCategories(), loadUnreadCounts()]);
-    const label=currentCatLabel();
-    if(S.currentCat!=='__all__'&&isShortsMode(label)) await loadShortsMode();
-    else if(S.currentCat!=='__all__'&&isYoutubeMode(label)) await loadYoutubeMode();
+    if(S.currentCat==='__youtube_merged__') await loadUnifiedYoutubeMode();
     else await loadArticles();
     renderCatTabs();
     toast('Refreshed');
