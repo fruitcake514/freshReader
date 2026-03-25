@@ -807,6 +807,7 @@ function loadStarredArticles(){
     const d=localStorage.getItem(STAR_CACHE_KEY);
     if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
   }catch(e){}
+}
 // UI state persistence
 function loadUIState(){
   try{
