@@ -1721,27 +1721,6 @@ function openShortsFromYt(){
     renderShortsGallery();
   }
 }
-  // Go directly to player for true shorts experience
-  stopAllMedia();
-  showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent='Shorts';
-  renderShortsCatBar();
-  openShortsPlayer(0);
-}
-  // Go directly to player
-  stopAllMedia();
-  showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent='Shorts';
-  renderShortsCatBar();
-  openShortsPlayer(0);
-}
-  // Go directly to player
-  stopAllMedia();
-  showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent='Shorts';
-  renderShortsCatBar();
-  openShortsPlayer(0);
-}
 async function loadShortsMode(){
   // Kept for backward compat — just redirect to openShortsFromYt if we have data
   if(S.ytArticles.length){ openShortsFromYt(); return; }
