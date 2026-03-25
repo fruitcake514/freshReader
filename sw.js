@@ -1,6 +1,7 @@
-// v5 — cache index.html for offline; stale-while-revalidate for the app shell
-const CACHE = 'freshrss-pwa-v5';
-
+// v6 — iOS PWA safe: network-first for navigations, cache-first for assets
+// Key fix: never respondWith() a redirected response — Safari/iOS rejects these
+// with "response served by service worker has redirections" on PWA relaunch.
+const CACHE = 'freshrss-pwa-v6';
 const PRECACHE = [
   './index.html',
   './manifest.json',
@@ -19,14 +20,28 @@ const PRECACHE = [
   './icons/icon-maskable-512.png',
 ];
 
+// ── Install: pre-cache the app shell ────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(async cache => {
+      // Fetch each precache asset explicitly with cache:'reload' so we never
+      // store a redirect-tainted response (the root cause of the iOS bug).
+      await Promise.allSettled(
+        PRECACHE.map(async url => {
+          try {
+            const res = await fetch(url, { cache: 'reload', redirect: 'error' });
+            if (res.ok) await cache.put(url, res);
+          } catch (_) {
+            // Asset unavailable at install time — skip silently, SW still installs.
+          }
+        })
+      );
+      await self.skipWaiting();
+    })
   );
 });
 
+// ── Activate: prune old caches ───────────────────────────────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -37,45 +52,87 @@ self.addEventListener('activate', e => {
   );
 });
 
+// ── Fetch ────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
 
-  // Never intercept FreshRSS API calls — always live, fall through on failure
-  if (url.pathname.includes('/api/greader') || url.pathname.includes('/accounts/ClientLogin')) return;
+  // 1. Never intercept FreshRSS API calls or auth — always live.
+  if (
+    url.pathname.includes('/api/greader') ||
+    url.pathname.includes('/accounts/ClientLogin')
+  ) return;
 
-  // Never intercept cross-origin requests (images, fonts, video CDNs)
+  // 2. Never intercept cross-origin requests (images, fonts, YouTube CDN, etc.)
+  //    Returning a redirect here is what triggers the iOS Safari error.
   if (url.origin !== self.location.origin) return;
 
-  // For navigation (page load) and HTML files: stale-while-revalidate.
-  // Serve from cache immediately so the app opens offline, update in background.
-  if (req.mode === 'navigate' || req.destination === 'document' || url.pathname.endsWith('.html')) {
+  // 3. Navigation requests (the page itself) — NETWORK-FIRST with cache fallback.
+  //    This is the critical iOS PWA fix:
+  //    - Network-first ensures a fresh, non-redirected response on relaunch.
+  //    - redirect:'error' means we NEVER hand Safari a redirected response.
+  //    - Cache fallback keeps the app working offline.
+  if (req.mode === 'navigate' || req.destination === 'document') {
     e.respondWith(
-      caches.open(CACHE).then(cache =>
-        cache.match('./index.html').then(cached => {
-          const networkFetch = fetch(req).then(res => {
-            if (res.ok && res.status === 200) cache.put('./index.html', res.clone());
-            return res;
-          }).catch(() => cached); // network failed — cached already returned
-          // Return cache immediately; update in background
-          return cached || networkFetch;
-        })
-      )
+      (async () => {
+        const cache = await caches.open(CACHE);
+        try {
+          // Always try the network first for navigations.
+          // redirect:'error' throws if the server redirects — preventing the iOS bug.
+          const res = await fetch('./index.html', {
+            cache: 'no-cache',
+            redirect: 'error',
+          });
+          // Only cache clean 200 OK responses — never cache redirects.
+          if (res.ok && res.status === 200) {
+            await cache.put('./index.html', res.clone());
+          }
+          return res;
+        } catch (_) {
+          // Network failed or redirected — serve cached copy offline.
+          const cached = await cache.match('./index.html');
+          if (cached) return cached;
+          // Last resort: plain offline message.
+          return new Response(
+            '<h1>Offline</h1><p>Please connect to the internet and try again.</p>',
+            { status: 503, headers: { 'Content-Type': 'text/html' } }
+          );
+        }
+      })()
     );
     return;
   }
 
-  // Cache-first for all other same-origin static assets (icons, manifest)
+  // 4. Same-origin static assets (icons, manifest) — cache-first, update in background.
+  if (req.method !== 'GET') return;
   e.respondWith(
-    caches.match(req).then(cached => {
-      if (cached) return cached;
-      return fetch(req).then(res => {
-        if (res.ok && res.status === 200 && req.method === 'GET') {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(req, clone));
-        }
-        return res;
-      }).catch(() => new Response('Offline', { status: 503 }));
-    })
+    (async () => {
+      const cached = await caches.match(req);
+      const networkPromise = fetch(req, { redirect: 'error' })
+        .then(async res => {
+          if (res.ok && res.status === 200) {
+            const cache = await caches.open(CACHE);
+            await cache.put(req, res.clone());
+          }
+          return res;
+        })
+        .catch(() => null);
+
+      // Return cache immediately if available; revalidate in background.
+      if (cached) {
+        networkPromise.catch(() => {}); // fire-and-forget update
+        return cached;
+      }
+      // Nothing cached — wait for network.
+      const res = await networkPromise;
+      return res || new Response('Offline', { status: 503 });
+    })()
   );
+});
+
+// ── Message: respond to PING from index.html health-check ───────────────────
+self.addEventListener('message', e => {
+  if (e.data?.type === 'PING') {
+    e.ports?.[0]?.postMessage({ type: 'PONG' });
+  }
 });
