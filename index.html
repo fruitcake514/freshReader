@@ -841,103 +841,6 @@ function persistUIState(){
     console.warn('Failed to persist UI state:', e);
   }
 }
-function loadReadSet(){
-  try{
-    const d=localStorage.getItem(READ_SET_KEY);
-    if(d){
-      const parsed=JSON.parse(d);
-      parsed.forEach(id=>S.readSet.add(id));
-    }
-  }catch(e){}
-}
-function persistReadSet(){
-  try{
-    localStorage.setItem(READ_SET_KEY, JSON.stringify([...S.readSet]));
-  }catch(e){
-    console.warn('Failed to persist read set:', e);
-  }
-}
-function pruneByDate(){
-  if(!S.cacheDays) return;
-  const cutoff=Date.now()/1000 - S.cacheDays*86400;
-  for(const id in S.cachedArticles){ if((S.cachedArticles[id].published||0)<cutoff) delete S.cachedArticles[id]; }
-}
-// Evict oldest non-starred articles until the serialised size is under ~4 MB
-function evictToFit(json){
-  const MAX=4*1024*1024;
-  if(json.length<=MAX) return json;
-  // Sort by published asc, remove oldest non-starred first
-  const entries=Object.entries(S.cachedArticles)
-    .filter(([id])=>!S.starSet.has(id))
-    .sort((a,b)=>(a[1].published||0)-(b[1].published||0));
-  for(const [id] of entries){
-    delete S.cachedArticles[id];
-    json=JSON.stringify(S.cachedArticles);
-    if(json.length<=MAX) break;
-  }
-  return json;
-}
-// Debounced write — coalesces rapid successive cacheArticles() calls into one write
-function persistArticles(){
-  pruneByDate();
-  clearTimeout(_persistTimer);
-  _persistTimer=setTimeout(()=>{
-    try{
-      let json=JSON.stringify(S.cachedArticles);
-      json=evictToFit(json);
-      localStorage.setItem(DB_KEY,json);
-    }catch(e){
-      if(e.name==='QuotaExceededError'){
-        evictToFit(''); // force eviction then retry
-        try{ localStorage.setItem(DB_KEY,JSON.stringify(S.cachedArticles)); }catch(_){}
-      } else { console.warn('Cache persist failed',e); }
-    }
-  }, 800);
-}
-function persistStarredArticles(){
-  const starred={};
-  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starred[id]=S.cachedArticles[id]; }
-  try{ localStorage.setItem(STAR_CACHE_KEY,JSON.stringify(starred)); }catch(e){}
-}
-function loadStarredArticles(){
-  try{
-    const d=localStorage.getItem(STAR_CACHE_KEY);
-    if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
-  }catch(e){}
-}
-// UI state persistence
-function loadUIState(){
-  try{
-    const d=localStorage.getItem(UI_STATE_KEY);
-    if(d){
-      const state=JSON.parse(d);
-      // Restore UI state
-      if(state.currentCat !== undefined) S.currentCat = state.currentCat;
-      if(state.currentFeed !== undefined) S.currentFeed = state.currentFeed;
-      if(state.filter !== undefined) S.filter = state.filter;
-      if(state.ytFilter !== undefined) S.ytFilter = state.ytFilter;
-      if(state.ytSubFilter !== undefined) S.ytSubFilter = state.ytSubFilter;
-      if(state.shortsFilter !== undefined) S.shortsFilter = state.shortsFilter;
-      if(state.shortsView !== undefined) S.shortsView = state.shortsView;
-    }
-  }catch(e){}
-}
-function persistUIState(){
-  try{
-    const state={
-      currentCat: S.currentCat,
-      currentFeed: S.currentFeed,
-      filter: S.filter,
-      ytFilter: S.ytFilter,
-      ytSubFilter: S.ytSubFilter,
-      shortsFilter: S.shortsFilter,
-      shortsView: S.shortsView
-    };
-    localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
-  }catch(e){
-    console.warn('Failed to persist UI state:', e);
-  }
-}
 function cacheArticles(items){
   items.forEach(a=>{ S.cachedArticles[a.id]=a; });
   persistArticles(); // debounced — no double write
@@ -2224,7 +2127,10 @@ function ytSkelHtml(n){ return Array(n).fill(0).map(()=>`<div class="yt-card ske
 // SERVICE WORKER + ONLINE/OFFLINE
 // ═══════════════════════════════════════════════════════════
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').then(reg=>{
+  // updateViaCache:'none' prevents the SW from caching its own script and serving
+  // stale navigation responses — the root cause of the iOS PWA Safari error
+  // "response served by service worker has redirections" after a force-quit.
+  navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).then(reg=>{
     // Notify user when a new SW version is waiting
     reg.addEventListener('updatefound',()=>{
       const newWorker=reg.installing;
