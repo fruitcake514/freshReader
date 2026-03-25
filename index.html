@@ -616,7 +616,7 @@ const S = {
   cachedArticles:{},
   currentCat:'__all__', currentFeed:null,
   filter:'unread',
-  readSet:new Set(), starSet:new Set(),
+  readSet:new Set(), starSet:new Set(), syncedReadSet:new Set(),
   curIdx:-1, curArticle:null,
   // Unified YouTube state — ytSubFilter: 'videos'|'shorts'|'hiddench'
   ytArticles:[], ytFilter:'unread', ytSubFilter:'videos', ytCurIdx:-1, ytCurArticle:null,
@@ -629,6 +629,8 @@ const S = {
   hiddenChannels: new Set(),
   // internal: pre-built Set of feed IDs that belong to shorts-named categories
   _shortsFeedIds: new Set(),
+  // shorts view: 'gallery' or 'player'
+  shortsView: 'gallery',
 };
 
 // Module-scoped vars (not on window)
@@ -671,6 +673,10 @@ function isArticleShort(a){
 // ═══════════════════════════════════════════════════════════
 const DB_KEY='fr_cache';
 const STAR_CACHE_KEY='fr_starred_articles';
+const READ_SET_KEY='fr_read_set';
+const SYNCED_READ_SET_KEY='fr_synced_read_set';
+// UI state persistence
+const UI_STATE_KEY='fr_ui_state';
 
 function saveSession(){
   localStorage.setItem('fr_server', S.server);
@@ -716,6 +722,43 @@ function unhideChannel(key){
 
 function loadPersistedArticles(){
   try{ const d=localStorage.getItem(DB_KEY); if(d){ Object.assign(S.cachedArticles,JSON.parse(d)); } }catch(e){}
+}
+function loadReadSet(){
+  try{
+    const d=localStorage.getItem(READ_SET_KEY);
+    if(d){
+      const parsed=JSON.parse(d);
+      parsed.forEach(id=>S.readSet.add(id));
+    }
+  }catch(e){}
+}
+function persistReadSet(){
+  try{
+    localStorage.setItem(READ_SET_KEY, JSON.stringify([...S.readSet]));
+  }catch(e){
+    console.warn('Failed to persist read set:', e);
+  }
+}
+function loadSyncedReadSet(){
+  try{
+    const d=localStorage.getItem(SYNCED_READ_SET_KEY);
+    if(d){
+      const parsed=JSON.parse(d);
+      S.syncedReadSet=new Set(parsed);
+    }else{
+      S.syncedReadSet=new Set();
+    }
+  }catch(e){
+    S.syncedReadSet=new Set();
+    console.warn('Failed to load synced read set:', e);
+  }
+}
+function persistSyncedReadSet(){
+  try{
+    localStorage.setItem(SYNCED_READ_SET_KEY, JSON.stringify([...S.syncedReadSet]));
+  }catch(e){
+    console.warn('Failed to persist synced read set:', e);
+  }
 }
 function pruneByDate(){
   if(!S.cacheDays) return;
@@ -764,6 +807,135 @@ function loadStarredArticles(){
     const d=localStorage.getItem(STAR_CACHE_KEY);
     if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
   }catch(e){}
+// UI state persistence
+function loadUIState(){
+  try{
+    const d=localStorage.getItem(UI_STATE_KEY);
+    if(d){
+      const state=JSON.parse(d);
+      // Restore UI state
+      if(state.currentCat !== undefined) S.currentCat = state.currentCat;
+      if(state.currentFeed !== undefined) S.currentFeed = state.currentFeed;
+      if(state.filter !== undefined) S.filter = state.filter;
+      if(state.ytFilter !== undefined) S.ytFilter = state.ytFilter;
+      if(state.ytSubFilter !== undefined) S.ytSubFilter = state.ytSubFilter;
+      if(state.shortsFilter !== undefined) S.shortsFilter = state.shortsFilter;
+      if(state.shortsView !== undefined) S.shortsView = state.shortsView;
+    }
+  }catch(e){}
+}
+function persistUIState(){
+  try{
+    const state={
+      currentCat: S.currentCat,
+      currentFeed: S.currentFeed,
+      filter: S.filter,
+      ytFilter: S.ytFilter,
+      ytSubFilter: S.ytSubFilter,
+      shortsFilter: S.shortsFilter,
+      shortsView: S.shortsView
+    };
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.warn('Failed to persist UI state:', e);
+  }
+}
+function loadReadSet(){
+  try{
+    const d=localStorage.getItem(READ_SET_KEY);
+    if(d){
+      const parsed=JSON.parse(d);
+      parsed.forEach(id=>S.readSet.add(id));
+    }
+  }catch(e){}
+}
+function persistReadSet(){
+  try{
+    localStorage.setItem(READ_SET_KEY, JSON.stringify([...S.readSet]));
+  }catch(e){
+    console.warn('Failed to persist read set:', e);
+  }
+}
+function pruneByDate(){
+  if(!S.cacheDays) return;
+  const cutoff=Date.now()/1000 - S.cacheDays*86400;
+  for(const id in S.cachedArticles){ if((S.cachedArticles[id].published||0)<cutoff) delete S.cachedArticles[id]; }
+}
+// Evict oldest non-starred articles until the serialised size is under ~4 MB
+function evictToFit(json){
+  const MAX=4*1024*1024;
+  if(json.length<=MAX) return json;
+  // Sort by published asc, remove oldest non-starred first
+  const entries=Object.entries(S.cachedArticles)
+    .filter(([id])=>!S.starSet.has(id))
+    .sort((a,b)=>(a[1].published||0)-(b[1].published||0));
+  for(const [id] of entries){
+    delete S.cachedArticles[id];
+    json=JSON.stringify(S.cachedArticles);
+    if(json.length<=MAX) break;
+  }
+  return json;
+}
+// Debounced write — coalesces rapid successive cacheArticles() calls into one write
+function persistArticles(){
+  pruneByDate();
+  clearTimeout(_persistTimer);
+  _persistTimer=setTimeout(()=>{
+    try{
+      let json=JSON.stringify(S.cachedArticles);
+      json=evictToFit(json);
+      localStorage.setItem(DB_KEY,json);
+    }catch(e){
+      if(e.name==='QuotaExceededError'){
+        evictToFit(''); // force eviction then retry
+        try{ localStorage.setItem(DB_KEY,JSON.stringify(S.cachedArticles)); }catch(_){}
+      } else { console.warn('Cache persist failed',e); }
+    }
+  }, 800);
+}
+function persistStarredArticles(){
+  const starred={};
+  for(const id in S.cachedArticles){ if(S.starSet.has(id)) starred[id]=S.cachedArticles[id]; }
+  try{ localStorage.setItem(STAR_CACHE_KEY,JSON.stringify(starred)); }catch(e){}
+}
+function loadStarredArticles(){
+  try{
+    const d=localStorage.getItem(STAR_CACHE_KEY);
+    if(d){ const p=JSON.parse(d); Object.assign(S.cachedArticles,p); Object.keys(p).forEach(id=>S.starSet.add(id)); }
+  }catch(e){}
+}
+// UI state persistence
+function loadUIState(){
+  try{
+    const d=localStorage.getItem(UI_STATE_KEY);
+    if(d){
+      const state=JSON.parse(d);
+      // Restore UI state
+      if(state.currentCat !== undefined) S.currentCat = state.currentCat;
+      if(state.currentFeed !== undefined) S.currentFeed = state.currentFeed;
+      if(state.filter !== undefined) S.filter = state.filter;
+      if(state.ytFilter !== undefined) S.ytFilter = state.ytFilter;
+      if(state.ytSubFilter !== undefined) S.ytSubFilter = state.ytSubFilter;
+      if(state.shortsFilter !== undefined) S.shortsFilter = state.shortsFilter;
+      if(state.shortsView !== undefined) S.shortsView = state.shortsView;
+    }
+  }catch(e){}
+}
+function persistUIState(){
+  try{
+    const state={
+      currentCat: S.currentCat,
+      currentFeed: S.currentFeed,
+      filter: S.filter,
+      ytFilter: S.ytFilter,
+      ytSubFilter: S.ytSubFilter,
+      shortsFilter: S.shortsFilter,
+      shortsView: S.shortsView
+    };
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.warn('Failed to persist UI state:', e);
+  }
 }
 function cacheArticles(items){
   items.forEach(a=>{ S.cachedArticles[a.id]=a; });
@@ -851,6 +1023,9 @@ async function loadApp(){
   showScreen('app-screen');
   loadPersistedArticles();
   loadStarredArticles();
+  loadReadSet();
+  loadSyncedReadSet();
+  loadUIState();
   loadExcludedCats();
   loadHiddenChannels();
 
@@ -1060,6 +1235,10 @@ async function loadArticles(appendMode=false){
       if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
       if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
     });
+    // Merge synced read set with current read set for cross-session consistency
+    if(!appendMode){
+      S.syncedReadSet.forEach(id=>S.readSet.add(id));
+    }
     if(S.currentCat==='__all__' && S.excludedCatIds.size>0 && S.filter!=='starred'){
       // Build a feed→cat lookup once per filter pass instead of per article
       const feedCatMap=new Map();
@@ -1535,7 +1714,33 @@ function openShortsFromYt(){
   showScreen('shorts-screen');
   document.getElementById('shorts-title').textContent='Shorts';
   renderShortsCatBar();
-  renderShortsGallery();
+  // Always go directly to player for true shorts experience (like YouTube)
+  if(S.shortsArticles.length > 0){
+    openShortsPlayer(0);
+  } else {
+    renderShortsGallery();
+  }
+}
+  // Go directly to player for true shorts experience
+  stopAllMedia();
+  showScreen('shorts-screen');
+  document.getElementById('shorts-title').textContent='Shorts';
+  renderShortsCatBar();
+  openShortsPlayer(0);
+}
+  // Go directly to player
+  stopAllMedia();
+  showScreen('shorts-screen');
+  document.getElementById('shorts-title').textContent='Shorts';
+  renderShortsCatBar();
+  openShortsPlayer(0);
+}
+  // Go directly to player
+  stopAllMedia();
+  showScreen('shorts-screen');
+  document.getElementById('shorts-title').textContent='Shorts';
+  renderShortsCatBar();
+  openShortsPlayer(0);
 }
 async function loadShortsMode(){
   // Kept for backward compat — just redirect to openShortsFromYt if we have data
@@ -1800,11 +2005,60 @@ function observeShortsSlides(){
   slidesEl.querySelectorAll('.short-slide').forEach(el=>_shortsObs.observe(el));
 }
 
+// Touch handling for immediate swipe response in shorts player
+let shortsSx=0, shortsSy=0, shortsSt=0;
+const SHORTS_T=50, SHORTS_MY=100, SHORTS_MT=300;
+document.getElementById('shorts-slides').addEventListener('touchstart',e=>{
+  if(!document.getElementById('shorts-player').classList.contains('open')) return;
+  shortsSx=e.touches[0].clientX; shortsSy=e.touches[0].clientY; shortsSt=Date.now();
+},{passive:true});
+document.getElementById('shorts-slides').addEventListener('touchend',e=>{
+  if(!document.getElementById('shorts-player').classList.contains('open')) return;
+  const dx=e.changedTouches[0].clientX-shortsSx;
+  const dy=Math.abs(e.changedTouches[0].clientY-shortsSy);
+  const dt=Date.now()-shortsSt;
+  if(Math.abs(dx)<SHORTS_T||dy>SHORTS_MY||dt>SHORTS_MT) return;
+  // Only respond to vertical swipes for shorts navigation
+  if(Math.abs(dx)>Math.abs(dy)*2) return; // Prefer vertical swipes
+  if(dy<0) navigateShortsPlayer(1); else navigateShortsPlayer(-1);
+},{passive:true});
 document.getElementById('shorts-slides').addEventListener('wheel',e=>{
   e.preventDefault();
   const el=document.getElementById('shorts-slides');
   el.scrollBy({top:e.deltaY>0?window.innerHeight:-window.innerHeight,behavior:'smooth'});
 },{passive:false});
+
+function navigateShortsPlayer(delta){
+  const total=S.shortsArticles.length;
+  if(total===0) return;
+  let newIdx=S.shortsPlayerIdx+delta;
+  if(newIdx<0) newIdx=total-1;
+  if(newIdx>=total) newIdx=0;
+  
+  // Update the player
+  const slides=document.getElementById('shorts-slides');
+  const currentSlide=slides.children[S.shortsPlayerIdx];
+  const newSlide=slides.children[newIdx];
+  
+  // Pause current video
+  pauseSlideAt(S.shortsPlayerIdx);
+  
+  // Update index and scroll to new slide
+  S.shortsPlayerIdx=newIdx;
+  newSlide.scrollIntoView({behavior:'smooth'});
+  
+  // Play new video
+  playSlideAt(newIdx);
+  
+  // Mark as read if not already
+  const a=S.shortsArticles[newIdx];
+  if(a&&!S.readSet.has(a.id)){
+    S.readSet.add(a.id);
+    apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+    persistReadSet();
+    persistSyncedReadSet(); // Save for cross-session sync
+  }
+}
 
 function toggleShortStar(i){
   const a=S.shortsArticles[i]; if(!a) return;
