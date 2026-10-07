@@ -1948,6 +1948,13 @@ function buildSlideMedia(a, raw, idx){
       </div>
     </div>`;
   }
+  // Non-YouTube embeds (e.g. TikTok quote iframes): render directly so they
+  // still appear in the doomscroll player with their own controls.
+  const frame=tmp.querySelector('iframe');
+  const frameSrc=frame?.getAttribute('src')||'';
+  if(frameSrc && ['tiktok.com','twitch.tv','player.twitch.tv','clips.twitch.tv','youtube.com','youtube-nocookie.com','youtu.be'].some(d=>frameSrc.includes(d))){
+    return `<iframe src="${esc(frameSrc)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;z-index:2;background:#000"></iframe>`;
+  }
   return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#444;font-size:2rem">▶</div>`;
 }
 
