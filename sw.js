@@ -1,5 +1,8 @@
-// v9 — Cloudflare Pages + iOS-safe PWA SW, subdir-safe, resilient precache
-const CACHE = 'freshrss-pwa-v9';
+// v10 — Cloudflare Pages + iOS-safe PWA SW, subdir-safe, resilient precache
+const CACHE = 'freshrss-pwa-v10';
+const THUMB_CACHE = 'freshrss-thumbs-v10';
+// Cross-origin hosts safe to cache for offline thumbnails (images only).
+const THUMB_HOSTS = new Set(['i.ytimg.com', 'img.youtube.com']);
 
 // Works when hosted at root OR in a subdirectory (e.g. /reader/)
 const SHELL_URL = new URL('./', self.location).toString();
@@ -55,7 +58,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k !== CACHE && k !== THUMB_CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -67,7 +70,7 @@ self.addEventListener('fetch', event => {
   // Only GET
   if (req.method !== 'GET') return;
 
-  // Skip FreshRSS API / auth
+  // Skip FreshRSS API / auth (must always be live so read/star sync)
   if (
     url.pathname.includes('/api/greader') ||
     url.pathname.includes('/accounts/ClientLogin')
@@ -75,7 +78,31 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Skip cross-origin
+  // Cross-origin video thumbnails: cache-first so grids work offline.
+  // YouTube embeds themselves still need network — only thumbs are cached.
+  if (THUMB_HOSTS.has(url.hostname) && req.destination === 'image') {
+    event.respondWith((async () => {
+      const cache = await caches.open(THUMB_CACHE);
+      const cached = await cache.match(req);
+      if (cached) return cached;
+      try {
+        const res = await fetch(req);
+        if (res.ok && res.status === 200) {
+          const clone = res.clone();
+          // cap: drop oldest when over ~200 thumbs
+          const keys = await cache.keys();
+          if (keys.length > 200) await cache.delete(keys[0]);
+          cache.put(req, clone);
+        }
+        return res;
+      } catch (_) {
+        return new Response('Offline', { status: 503 });
+      }
+    })());
+    return;
+  }
+
+  // Skip other cross-origin
   if (url.origin !== self.location.origin) return;
 
   const isNavigation =

@@ -534,6 +534,12 @@
   </div>
   <div class="cat-bar" id="shorts-cat-bar" style="background:#111;border-color:#333;margin-top:calc(var(--safe-top) + var(--nav-h))"></div>
   <div class="feed-bar hidden" id="shorts-feed-bar" style="background:#1a1a1a;border-color:#333"></div>
+  <div style="padding:8px 12px;background:#111;border-bottom:1px solid #333;display:flex;gap:8px">
+    <input id="shorts-search-input" type="search" placeholder="Paste a YouTube URL to watch in-app, or type to search…"
+      style="flex:1;padding:8px 12px;border-radius:20px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:.85rem;outline:none"
+      onkeydown="if(event.key==='Enter') ytSearchShorts()"/>
+    <button onclick="ytSearchShorts()" style="padding:8px 14px;background:#c00;color:#fff;border-radius:20px;font-size:.8rem;font-weight:700;flex-shrink:0">Go</button>
+  </div>
   <div class="filter-bar" style="background:#111;border-color:#333">
     <div class="filter-pills">
       <button class="filter-btn" id="sf-all" onclick="setShortsFilter('all')" style="color:#aaa;border-color:#333">All</button>
@@ -564,7 +570,7 @@
 
     <div class="settings-section-title">Feed Display</div>
     <div class="setting-row col">
-      <div><div class="setting-label">Categories in "All" feed</div><div class="setting-sub">Uncheck categories to hide them from the main All feed. They still appear when browsing directly.</div></div>
+      <div><div class="setting-label">Categories in "All" feed</div><div class="setting-sub">Uncheck categories to hide them from the main All feed. YouTube is excluded by default (it lives in the ▶ YouTube tab).</div></div>
       <div class="cat-checkbox-list" id="cat-filter-list"></div>
     </div>
 
@@ -618,12 +624,12 @@ const S = {
   cachedArticles:{},
   currentCat:'__all__', currentFeed:null,
   filter:'unread', query:'',
-  readSet:new Set(), starSet:new Set(), syncedReadSet:new Set(),
+  readSet:new Set(), starSet:new Set(), syncedReadSet:new Set(), pendingOps:[],
   curIdx:-1, curArticle:null,
   // Unified YouTube state — ytSubFilter: 'videos'|'shorts'|'hiddench'
   ytArticles:[], ytFilter:'unread', ytSubFilter:'videos', ytCurIdx:-1, ytCurArticle:null,
   // pagination
-  articleContinuation: null, ytContinuation: null,
+  articleContinuation: null, ytContinuation: null, ytContMap: {}, ytFetchedUnreadOnly: false,
   shortsArticles:[], shortsFilter:'unread', shortsPlayerIdx:0,
   unreadMap:{},
   cacheDays:7,
@@ -860,6 +866,48 @@ function pruneByDate(){
   const cutoff=Date.now()/1000 - S.cacheDays*86400;
   for(const id in S.cachedArticles){ if((S.cachedArticles[id].published||0)<cutoff) delete S.cachedArticles[id]; }
 }
+// ── Offline op queue: read/star (and mark-all) edits made while offline are
+// stored and flushed on reconnect, so FreshRSS read/unread stays in sync. ──
+const PENDING_OPS_KEY='fr_pending_ops';
+function loadPendingOps(){
+  try{ S.pendingOps=JSON.parse(localStorage.getItem(PENDING_OPS_KEY)||'[]'); }
+  catch(e){ S.pendingOps=[]; }
+  if(!Array.isArray(S.pendingOps)) S.pendingOps=[];
+}
+function savePendingOps(){
+  try{ localStorage.setItem(PENDING_OPS_KEY,JSON.stringify(S.pendingOps.slice(-500))); }
+  catch(e){}
+}
+function queueOp(op){
+  loadPendingOpsIfNeeded();
+  S.pendingOps.push({ts:Date.now(), ...op});
+  savePendingOps();
+}
+function loadPendingOpsIfNeeded(){ if(!Array.isArray(S.pendingOps)) loadPendingOps(); }
+async function flushPendingOps(){
+  loadPendingOpsIfNeeded();
+  if(!S.pendingOps.length || !S.auth || !navigator.onLine) return;
+  const ops=S.pendingOps.splice(0,S.pendingOps.length);
+  savePendingOps();
+  for(const op of ops){
+    try{
+      if(op.t==='tag') await apiPost('/reader/api/0/edit-tag',op.body);
+      else if(op.t==='markAll') await apiPost('/reader/api/0/mark-all-as-read',op.body);
+    }catch(e){ queueOp(op); break; }
+  }
+}
+// Fire-and-forget wrappers: try now, queue on failure/offline.
+function readRemote(id){
+  if(!id) return Promise.resolve();
+  return apiPost('/reader/api/0/edit-tag',{i:id,a:'user/-/state/com.google/read'})
+    .catch(()=>{ queueOp({t:'tag',body:{i:id,a:'user/-/state/com.google/read'}}); });
+}
+function starRemote(id,on){
+  if(!id) return Promise.resolve();
+  const body={i:id,[on?'a':'r']:'user/-/state/com.google/starred'};
+  return apiPost('/reader/api/0/edit-tag',body)
+    .catch(()=>{ queueOp({t:'tag',body}); });
+}
 // Evict oldest non-starred articles until the serialised size is under ~4 MB
 function evictToFit(json){
   const MAX=4*1024*1024;
@@ -1028,6 +1076,7 @@ async function loadApp(){
   loadExcludedCats();
   loadHiddenChannels();
   loadShortOverrides();
+  loadPendingOps();
 
   if(!navigator.onLine){
     showOfflineBanner(true);
@@ -1036,6 +1085,7 @@ async function loadApp(){
   }
   try{
     await Promise.all([loadCategories(), loadUnreadCounts()]);
+    await flushPendingOps();
     if(S.currentCat==='__youtube_merged__') await loadUnifiedYoutubeMode();
     else await loadArticles();
     showOfflineBanner(false);
@@ -1110,6 +1160,15 @@ async function loadCategories(){
     S.feeds=subs;
     _catList=S.cats;
     rebuildShortsFeedIds();
+    // ALL mimics main stream: YouTube-family categories are excluded from All
+    // by default (they live in the ▶ YouTube tab). Only on first run — the
+    // Settings checkboxes remain the override afterwards.
+    try{
+      if(localStorage.getItem('fr_excluded_cats')===null){
+        S.cats.filter(c=>isYoutubeFamily(c.label||'')).forEach(c=>S.excludedCatIds.add(c.id));
+        saveExcludedCats();
+      }
+    }catch(e){}
     renderCatTabs();
   }catch(e){ console.error('loadCategories',e); }
 }
@@ -1316,7 +1375,7 @@ async function openArticle(idx, dir){
   else{ renderReader(a); showScreen('reader-screen'); }
   updateReaderNav(idx,arts.length);
   if(markReadLocal(a.id)){
-    apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+    readRemote(a.id);
   }
   updateStarBtn();
 }
@@ -1370,7 +1429,7 @@ function updateStarBtn(){
 function toggleStar(){
   const a=S.curArticle; if(!a) return;
   const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
+  starRemote(a.id,!starred);
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Starred ★'); }
   persistStarredArticles();
   updateStarBtn();
@@ -1378,7 +1437,7 @@ function toggleStar(){
 async function markReadCurrent(){
   const a=S.curArticle; if(!a) return;
   markReadLocal(a.id);
-  await apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+  await readRemote(a.id);
   toast('Marked read');
 }
 function openOrig(){
@@ -1394,7 +1453,8 @@ async function markAllRead(){
     let sid;
     if(S.currentCat==='__all__'||S.currentCat==='__youtube_merged__') sid='user/-/state/com.google/reading-list';
     else sid=S.currentFeed||S.currentCat;
-    await apiPost('/reader/api/0/mark-all-as-read',{s:sid,ts});
+    try{ await apiPost('/reader/api/0/mark-all-as-read',{s:sid,ts}); }
+    catch(e){ queueOp({t:'markAll',body:{s:sid,ts}}); }
     S.articles.forEach(a=>{ S.readSet.add(a.id); S.syncedReadSet.add(a.id); });
     S.ytArticles.forEach(a=>{ S.readSet.add(a.id); S.syncedReadSet.add(a.id); });
     persistReadSet(); persistSyncedReadSet();
@@ -1500,55 +1560,56 @@ async function loadUnifiedYoutubeMode(appendMode=false){
   if(!appendMode){
     grid.innerHTML=ytSkelHtml(6);
     S.ytContinuation=null;
+    S.ytContMap={};
   }
   // Collect stream IDs from all yt+shorts categories AND lone YouTube feeds
   const { ytCats: allYtCats, loneFeeds } = collectYoutubeSources();
   if(!allYtCats.length && !loneFeeds.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No YouTube categories found</p></div>'; return; }
   try{
-    // Fetch from each category AND each lone feed, then merge
+    // Fetch from each category AND each lone feed, then merge.
+    // Each stream has its OWN continuation token — sharing one across
+    // streams returns duplicates/empties (the old "load more shows 4" bug).
     let allItems=[];
-    let continuation=null;
+    const fetchOne=async (sid)=>{
+      const params={n:100};
+      if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
+      else if(S.ytFilter==='starred') return {items:[],continuation:null,sid};
+      params.s=sid;
+      if(appendMode && S.ytContMap[sid]) params.c=S.ytContMap[sid];
+      const data=await apiGet('/reader/api/0/stream/contents',params,signal);
+      return {...data, sid};
+    };
     const fetchPromises=[
-      ...allYtCats.map(async c=>{
-        const params={n:50};
-        if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
-        else if(S.ytFilter==='starred') return {items:[],continuation:null};
-        params.s=c.id;
-        if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
-        const data=await apiGet('/reader/api/0/stream/contents',params,signal);
-        if(data.continuation) continuation=data.continuation;
-        return data;
-      }),
-      ...loneFeeds.map(async f=>{
-        const params={n:50};
-        if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
-        else if(S.ytFilter==='starred') return {items:[],continuation:null};
-        params.s=f.id;
-        if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
-        const data=await apiGet('/reader/api/0/stream/contents',params,signal);
-        if(data.continuation) continuation=data.continuation;
-        return data;
-      }),
+      ...allYtCats.map(c=>fetchOne(c.id)),
+      ...loneFeeds.map(f=>fetchOne(f.id)),
     ];
     let fetched;
     if(S.ytFilter==='starred'){
-      const data=await apiGet('/reader/api/0/stream/contents',{n:50,s:'user/-/state/com.google/starred',...(appendMode&&S.ytContinuation?{c:S.ytContinuation}:{})},signal);
-      if(data.continuation) continuation=data.continuation;
+      const data=await apiGet('/reader/api/0/stream/contents',{n:100,s:'user/-/state/com.google/starred',...(appendMode&&S.ytContMap['__starred__']?{c:S.ytContMap['__starred__']}:{})},signal);
+      if(data.continuation) S.ytContMap['__starred__']=data.continuation; else delete S.ytContMap['__starred__'];
       fetched=[data];
     } else {
       fetched=await Promise.all(fetchPromises);
     }
     fetched.forEach(data=>{
+      if(data && data.sid){
+        if(data.continuation) S.ytContMap[data.sid]=data.continuation;
+        else delete S.ytContMap[data.sid];
+      }
       (data.items||[]).forEach(a=>{
         if((a.categories||[]).includes('user/-/state/com.google/read')) S.readSet.add(a.id);
         if((a.categories||[]).includes('user/-/state/com.google/starred')) S.starSet.add(a.id);
         allItems.push(a);
       });
     });
-    S.ytContinuation=continuation;
+    S.ytContinuation=Object.keys(S.ytContMap).length?'more':null;
+    S.ytFetchedUnreadOnly=(S.ytFilter==='unread');
     allItems.sort((a,b)=>(b.published||0)-(a.published||0));
     cacheArticles(allItems);
-    if(appendMode) S.ytArticles=[...S.ytArticles,...allItems];
+    if(appendMode){
+      const seen=new Set(S.ytArticles.map(a=>a.id));
+      S.ytArticles=[...S.ytArticles,...allItems.filter(a=>!seen.has(a.id))];
+    }
     else S.ytArticles=allItems;
     renderYtGrid();
     const wrap=document.getElementById('yt-load-more-wrap');
@@ -1581,12 +1642,19 @@ function setYtSubFilterShorts(){
 }
 
 function setYtFilter(f){
+  const prev=S.ytFilter;
   S.ytFilter=f;
   persistUIState();
   ['all','unread','starred'].forEach(x=>{
     const btn=document.getElementById('yf-'+x);
     if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; btn.style.borderColor=x===f?'color-mix(in srgb,var(--accent) 30%,transparent)':'#444'; }
   });
+  // 'All' needs read items too — refetch if we only ever fetched unread.
+  if((f==='all'||f==='starred') && prev!==f && S.ytFetchedUnreadOnly){
+    S.ytContMap={}; S.ytContinuation=null;
+    loadUnifiedYoutubeMode();
+    return;
+  }
   renderYtGrid();
 }
 
@@ -1672,10 +1740,16 @@ function ytSearch(){
     toast('Opening YouTube search…');
   }
 }
+function ytSearchShorts(){
+  const inp=document.getElementById('shorts-search-input');
+  const main=document.getElementById('yt-search-input');
+  if(inp && main){ main.value=inp.value; }
+  ytSearch();
+}
 function openYtArticle(idx){
   const a=S.ytArticles[idx]; if(!a) return;
   S.ytCurIdx=idx; S.ytCurArticle=a;
-  if(markReadLocal(a.id)){ apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
+  if(markReadLocal(a.id)){ readRemote(a.id); }
   renderYtReader(a);
   showScreen('yt-reader');
 }
@@ -1719,7 +1793,7 @@ function closeYtReader(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(
 function toggleYtStar(){
   const a=S.ytCurArticle; if(!a) return;
   const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
+  starRemote(a.id,!starred);
   if(starred){ S.starSet.delete(a.id); toast('Unstarred'); } else { S.starSet.add(a.id); toast('Saved ★'); }
   persistStarredArticles();
   renderYtReader(a);
@@ -1748,6 +1822,9 @@ function openShortsFromYt(keepPlayer){
   showScreen('shorts-screen');
   document.getElementById('shorts-title').textContent='Shorts · my feed';
   renderShortsCatBar();
+  // Gallery is the Shorts home (same search/nav feel as Videos).
+  // Player opens on top; back from player lands here; back from here → Videos.
+  renderShortsGallery();
   if(!arts.length){
     // Diagnostics: tell the user WHY.
     closeShortsPlayer();
@@ -1815,8 +1892,6 @@ async function loadShortsMode(){
     openShortsFromYt();
   }catch(e){ gallery.innerHTML=`<div style="padding:60px 20px;text-align:center;color:#666">${esc(e.message)}</div>`; }
 }
-function exitShortsMode(){ stopAllMedia(); showScreen('yt-screen'); renderYtGrid(); }
-
 function renderShortsCatBar(){
   const bar=document.getElementById('shorts-cat-bar'); if(!bar) return;
   let h=`<button class="cat-tab" onclick="exitShortsMode()" style="color:#aaa;border-color:transparent">◀ YouTube</button>`;
@@ -1889,6 +1964,23 @@ function closeShortsPlayer(){
   document.querySelectorAll('.short-slide video').forEach(v=>{ try{v.pause();}catch(e){} });
   document.querySelectorAll('.short-slide iframe').forEach(f=>f.remove());
   player.classList.remove('open');
+  // Back from player lands on the Shorts grid with fresh read states.
+  try{ renderShortsGallery(); }catch(e){}
+}
+function exitShortsMode(){
+  stopAllMedia();
+  // Leave Shorts → land on Videos (not a shorts-as-longform grid).
+  S.ytSubFilter='videos';
+  ['videos','shorts','hiddench'].forEach(x=>{
+    const btn=document.getElementById('ysf-'+x);
+    if(!btn) return;
+    const active=x==='videos';
+    btn.style.background=active?'#c00':'transparent';
+    btn.style.color=active?'#fff':'#aaa';
+    btn.style.borderColor=active?'#c00':'#444';
+  });
+  showScreen('yt-screen');
+  renderYtGrid();
 }
 
 function renderShortsSlides(startIdx){
@@ -1907,6 +1999,10 @@ function renderShortsSlides(startIdx){
         <div class="mute-badge" style="display:inline-block;margin-top:6px;font-size:.7rem;font-weight:700;background:rgba(0,0,0,.6);padding:3px 9px;border-radius:20px;color:#fff;pointer-events:none">🔇 tap for sound</div>
       </div>
       <div class="short-actions" onclick="event.stopPropagation()">
+        <div class="short-action" id="snd-${i}" onclick="toggleSlideSound(${i})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+          <span>Sound</span>
+        </div>
         <div class="short-action" onclick="toggleShortStar(${i})">
           <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'white'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span>${starred?'Saved':'Save'}</span>
@@ -2020,26 +2116,60 @@ function loadSlideYt(idx, id, {autoplay=false, muted=false, userGesture=false}={
   poster.remove();
   syncYtMuteBadge(idx);
 }
-// Tap toggles sound: muted autoplay → reload unmuted (allowed as user gesture);
-// unmuted → mute via player API without reload.
+// Tap toggles sound. NOTE: taps directly on a YouTube iframe never reach us
+// (separate document) — so the Sound action button calls toggleSlideSound,
+// which handles both native <video> and YT iframes.
+// For YT: try API unMute on the live player first (keeps playback position);
+// fall back to an unmuted reload (user gesture allows sound).
 function toggleSlideYtMute(idx){
   const slide=document.getElementById('ss-'+idx); if(!slide) return;
   const iframe=slide.querySelector('iframe');
   if(!iframe) return;
   const id=iframe.dataset.ytid;
   if(iframe.dataset.muted==='1'){
-    const fresh=document.createElement('iframe');
-    fresh.src=ytEmbedSrc(id,{autoplay:true, muted:false});
-    fresh.dataset.ytid=id; fresh.dataset.muted='0';
-    fresh.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
-    fresh.setAttribute('allowfullscreen','');
-    fresh.style.cssText=iframe.style.cssText;
-    iframe.replaceWith(fresh);
+    try{
+      iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}','*');
+      iframe.contentWindow.postMessage('{"event":"command","func":"setVolume","args":[100]}','*');
+      iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}','*');
+    }catch(e){}
+    iframe.dataset.muted='0';
+    syncYtMuteBadge(idx);
+    // If the player wasn't ready for API commands, force an unmuted reload.
+    setTimeout(()=>{
+      const cur=document.getElementById('ss-'+idx)?.querySelector('iframe');
+      if(cur && cur.dataset.ytid===id && cur.dataset.muted==='0' && cur===iframe){
+        try{
+          const probe=cur.src;
+          if(probe.includes('mute=1')){
+            const fresh=document.createElement('iframe');
+            fresh.src=ytEmbedSrc(id,{autoplay:true, muted:false});
+            fresh.dataset.ytid=id; fresh.dataset.muted='0';
+            fresh.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
+            fresh.setAttribute('allowfullscreen','');
+            fresh.style.cssText=cur.style.cssText;
+            cur.replaceWith(fresh);
+          }
+        }catch(e){}
+      }
+    }, 900);
   } else {
     try{ iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}','*'); }catch(e){}
     iframe.dataset.muted='1';
+    syncYtMuteBadge(idx);
   }
-  syncYtMuteBadge(idx);
+}
+// Unified Sound button: native video → toggle .muted; YT iframe → API/reload.
+function toggleSlideSound(idx){
+  const slide=document.getElementById('ss-'+idx); if(!slide) return;
+  const video=slide.querySelector('video');
+  if(video){
+    video.muted=!video.muted;
+    if(video.muted) video.setAttribute('muted',''); else video.removeAttribute('muted');
+    video.play().catch(()=>{});
+    syncMuteBadge(video);
+    return;
+  }
+  toggleSlideYtMute(idx);
 }
 function syncYtMuteBadge(idx){
   const slide=document.getElementById('ss-'+idx); if(!slide) return;
@@ -2109,7 +2239,7 @@ function observeShortsSlides(){
         const a=S.shortsArticles[idx];
         if(a&&!S.readSet.has(a.id)){
           markReadLocal(a.id);
-          apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+          readRemote(a.id);
         }
       } else {
         _shortsPlaying.delete(idx);
@@ -2150,14 +2280,14 @@ function navigateShortsPlayer(delta){
   const a=S.shortsArticles[newIdx];
   if(a&&!S.readSet.has(a.id)){
     markReadLocal(a.id);
-    apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
+    readRemote(a.id);
   }
 }
 
 function toggleShortStar(i){
   const a=S.shortsArticles[i]; if(!a) return;
   const starred=S.starSet.has(a.id);
-  apiPost('/reader/api/0/edit-tag',{i:a.id,[starred?'r':'a']:'user/-/state/com.google/starred'}).catch(()=>{});
+  starRemote(a.id,!starred);
   if(starred) S.starSet.delete(a.id); else S.starSet.add(a.id);
   const action=document.querySelector(`#ss-${i} .short-action svg`);
   if(action){ action.setAttribute('fill',S.starSet.has(a.id)?'#f59e0b':'none'); action.setAttribute('stroke',S.starSet.has(a.id)?'#f59e0b':'white'); }
@@ -2358,9 +2488,10 @@ if('serviceWorker' in navigator){
 
 window.addEventListener('online', async()=>{
   showOfflineBanner(false);
-  toast('Back online — refreshing…');
+  toast('Back online — syncing…');
   if(!S.auth) return;
   try{
+    await flushPendingOps();
     await Promise.all([loadCategories(), loadUnreadCounts()]);
     // Restore the correct screen
     if(S.currentCat==='__youtube_merged__') await loadUnifiedYoutubeMode();
@@ -2368,6 +2499,16 @@ window.addEventListener('online', async()=>{
   }catch(e){ showOfflineBanner(true); }
 });
 window.addEventListener('offline',()=>{ showOfflineBanner(true); });
+// iOS can suspend/evict before debounced writes run — flush everything now.
+window.addEventListener('pagehide',()=>{
+  try{
+    clearTimeout(_persistTimer); clearTimeout(_readPersistT);
+    persistReadSet(); persistSyncedReadSet(); savePendingOps();
+    let json=JSON.stringify(S.cachedArticles);
+    try{ json=evictToFit(json); localStorage.setItem(DB_KEY,json); }catch(e){}
+    persistStarredArticles();
+  }catch(e){}
+});
 // NOTE: no screen.orientation.lock — landscape is needed for video/tablets.
 
 // ── Pull-to-refresh ──────────────────────────────────────
