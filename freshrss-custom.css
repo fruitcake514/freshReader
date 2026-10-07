@@ -1,0 +1,78 @@
+/* FreshRSS server UI custom CSS — paste in FreshRSS → Settings → Display → Custom CSS.
+   NOTE: this styles the FreshRSS web UI only. It does NOT affect the FreshReader PWA. */
+
+body img,
+body video {
+  filter: brightness(.8);
+}
+
+img.favicon {
+  background: none;
+  border-radius: 2px;
+}
+
+html,
+body {
+  color: #aaaabb;
+  font-family: "OpenSans", "Cantarell", "Helvetica", "Arial", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.day {
+  font-weight: bold;
+  line-height: 2em;
+}
+
+.day .name {
+  padding: 0 10px 0 0;
+  color: #aaaabb;
+  font-size: 1.2em;
+  opacity: 1; /* was: 100 (invalid — opacity takes 0–1) */
+  font-style: italic;
+  text-align: right;
+  text-shadow: 0 -1px 0 #333;
+}
+
+.flux .item {
+  line-height: 30px;
+}
+
+.tree-folder-title {
+  font-size: 1rem;
+  line-height: 2.1rem;
+}
+
+.flux_header .item.title a {
+  color: #e3e3e3;
+}
+
+.flux_header .title {
+  font-size: 0.8rem;
+}
+
+.flux.not_read .item.title,
+.flux.current .item.title {
+  font-weight: normal;
+}
+
+.flux.not_read:not(.current) {
+  background: #141414;
+}
+
+.flux.not_read {
+  border-left-color: #ff5300;
+}
+
+/* WARNING: these two collapse the FreshRSS top header to 5px.
+   Remove them if your header/navigation disappears. */
+.header > .item {
+  padding: 0;
+}
+
+.header {
+  height: 5px;
+}
+
+h1 {
+  font-size: 1.25em;
+  line-height: 1.6em;
+}

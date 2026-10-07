@@ -488,7 +488,7 @@
     <div style="display:flex;gap:5px;width:100%">
       <button id="ysf-videos" class="feed-tab active" onclick="setYtSubFilter('videos')" style="background:#c00;color:#fff;border-color:#c00;font-size:.75rem">▶ Videos</button>
       <button id="ysf-shorts" class="feed-tab" onclick="setYtSubFilterShorts()" style="background:transparent;color:#aaa;border-color:#444;font-size:.75rem">⚡ Shorts</button>
-      <button id="ysf-hiddench" class="feed-tab" onclick="setYtSubFilter('hiddench')" style="background:transparent;color:#aaa;border-color:#444;font-size:.75rem">🚫 Hidden Channels</button>
+      <button id="ysf-hiddench" class="feed-tab" onclick="setYtSubFilter('hiddench')" style="background:transparent;color:#aaa;border-color:#444;font-size:.75rem">🚫 Hidden Shorts</button>
     </div>
     <!-- Read filter -->
     <div class="filter-pills">
@@ -570,7 +570,7 @@
 
     <div class="settings-section-title">YouTube / Shorts</div>
     <div class="setting-row col">
-      <div><div class="setting-label">Hidden channels</div><div class="setting-sub">Articles from these channels are moved to the "Hidden" filter in YouTube &amp; Shorts views. Affects past and future articles.</div></div>
+      <div><div class="setting-label">Hidden from Shorts</div><div class="setting-sub">Shorts from these channels are hidden from the Shorts player. Their long-form videos still show in Videos. Affects past and future articles.</div></div>
       <div class="hidden-ch-list" id="hidden-ch-list"></div>
     </div>
 
@@ -629,6 +629,9 @@ const S = {
   cacheDays:7,
   excludedCatIds: new Set(),
   hiddenChannels: new Set(),
+  // manual per-article overrides: id -> true (is short) / false (not short).
+  // Needed because a single YouTube feed mixes watch?v= links for both.
+  shortOverrides: {},
   // internal: pre-built Set of feed IDs that belong to shorts-named categories
   _shortsFeedIds: new Set(),
   // shorts view: 'gallery' or 'player'
@@ -651,6 +654,22 @@ const YOUTUBE_KEYWORDS = ['youtube','yt','videos'];
 function isShortsMode(label){ return SHORTS_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
 function isYoutubeMode(label){ return YOUTUBE_KEYWORDS.some(k=>label.toLowerCase().includes(k)); }
 function isYoutubeFamily(label){ return isYoutubeMode(label)||isShortsMode(label); }
+// A single FEED named "YouTube" (one feed holding all subscriptions) must also
+// count — not just categories. Match feed title/url/id (word-boundary for "yt").
+function isYoutubeFeed(f){
+  if(!f) return false;
+  const t = `${f.title || ''} ${f.url || ''} ${f.id || ''}`;
+  return /youtube|youtu\.be/i.test(t) || /\byt\b/i.test(f.title || '');
+}
+// All YouTube sources: matching categories + matching individual feeds
+// (covers "one category with many channels" AND "one feed with everything").
+function collectYoutubeSources(){
+  const ytCats = S.cats.filter(c => isYoutubeFamily(c.label || ''));
+  const catFeedIds = new Set();
+  ytCats.forEach(c => (c.feeds || []).forEach(f => catFeedIds.add(f.id)));
+  const loneFeeds = (S.feeds || []).filter(f => !catFeedIds.has(f.id) && isYoutubeFeed(f));
+  return { ytCats, loneFeeds };
+}
 function currentCatLabel(){
   const c = S.cats.find(c=>c.id===S.currentCat);
   return c?c.label:'';
@@ -662,12 +681,71 @@ function rebuildShortsFeedIds(){
   S.cats.filter(c=>isShortsMode(c.label)).forEach(c=>c.feeds.forEach(f=>S._shortsFeedIds.add(f.id)));
 }
 
-// Check if an article is a Short — uses pre-built Set, O(1)
+// Gather every URL-ish slot a FreshRSS/GReader item can carry the video link in.
+// youlag/server setups vary: canonical may be empty while alternate[1] or the
+// content HTML holds the https://www.youtube.com/shorts/… link.
+function articleUrlHaystack(a){
+  const parts = [];
+  if(a?.id) parts.push(a.id);
+  (a?.canonical || []).forEach(c => c?.href && parts.push(c.href));
+  (a?.alternate || []).forEach(c => c?.href && parts.push(c.href));
+  (a?.enclosure || []).forEach(c => c?.href && parts.push(c.href));
+  const raw = a?.summary?.content || a?.content?.content || '';
+  if(raw){
+    parts.push(raw);
+    // also push extracted href/src attributes (cheaper than full scan misses)
+    const m = raw.match(/https?:\/\/[^\s"'<>]+/g);
+    if(m) parts.push(...m.slice(0, 20));
+  }
+  return parts.join('\n');
+}
+
+// Check if an article is a Short.
+// Works for a SINGLE mixed YouTube feed too (watch?v= links for both kinds),
+// using (in order): manual override → /shorts/ in ANY url slot →
+// #shorts-style hashtag in title/description → shorts-only feed membership.
 function isArticleShort(a){
-  const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
-  if(url.includes('/shorts/')) return true;
-  const feedId=a.origin?.streamId;
+  if(!a) return false;
+  const ov = S.shortOverrides[a.id];
+  if(ov === true || ov === false) return ov;
+  if(articleUrlHaystack(a).includes('/shorts/')) return true;
+  const raw = a.summary?.content || a.content?.content || '';
+  const tagSrc = `${a.title || ''} ${stripTags(raw).slice(0, 500)}`;
+  if(/(^|\s)#(shorts?|ytshorts)\b/i.test(tagSrc)) return true;
+  const feedId = a.origin?.streamId;
   return feedId ? S._shortsFeedIds.has(feedId) : false;
+}
+// Per-article breakdown for the Diagnose panel (no overrides applied).
+function shortDetectWhy(a){
+  const hay = articleUrlHaystack(a);
+  const raw = a?.summary?.content || a?.content?.content || '';
+  return {
+    inCanonical: (a?.canonical || []).some(c => (c?.href || '').includes('/shorts/')),
+    inAlternate: (a?.alternate || []).some(c => (c?.href || '').includes('/shorts/')),
+    inContent: (raw || '').includes('/shorts/'),
+    hashtag: /(^|\s)#(shorts?|ytshorts)\b/i.test(`${a?.title || ''} ${stripTags(raw).slice(0, 500)}`),
+    hayHas: hay.includes('/shorts/'),
+    firstUrl: a?.canonical?.[0]?.href || a?.alternate?.[0]?.href || (a?.id || '').slice(0, 80),
+  };
+}
+const SHORT_OVERRIDES_KEY = 'fr_short_overrides';
+function loadShortOverrides(){
+  try{
+    const raw = localStorage.getItem(SHORT_OVERRIDES_KEY);
+    S.shortOverrides = raw ? (JSON.parse(raw) || {}) : {};
+  }catch(e){ S.shortOverrides = {}; }
+}
+function saveShortOverrides(){
+  try{ localStorage.setItem(SHORT_OVERRIDES_KEY, JSON.stringify(S.shortOverrides)); }catch(e){}
+}
+function setShortOverride(id, isShort){
+  if(!id) return;
+  S.shortOverrides[id] = !!isShort;
+  saveShortOverrides();
+  renderYtGrid();
+  // refresh shorts list if player/gallery open
+  if(document.getElementById('shorts-screen')?.classList.contains('active')) openShortsFromYt(true);
+  toast(isShort ? 'Marked as Short' : 'Marked as full video');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -710,14 +788,14 @@ function hideChannel(name){
   if(!key) return;
   S.hiddenChannels.add(key);
   saveHiddenChannels();
-  toast('Channel hidden — switch to "Hidden Channels" tab to see it');
+  toast('Hidden from Shorts — long videos from this channel still show');
   renderYtGrid();
   renderHiddenChannelsList();
 }
 function unhideChannel(key){
   S.hiddenChannels.delete(key);
   saveHiddenChannels();
-  toast('Channel restored');
+  toast('Channel back in Shorts');
   renderYtGrid();
   renderHiddenChannelsList();
 }
@@ -949,6 +1027,7 @@ async function loadApp(){
   loadUIState();
   loadExcludedCats();
   loadHiddenChannels();
+  loadShortOverrides();
 
   if(!navigator.onLine){
     showOfflineBanner(true);
@@ -1050,11 +1129,12 @@ function renderCatTabs(){
   const bar=document.getElementById('cat-bar');
   const allU=S.unreadMap['user/-/state/com.google/reading-list']||0;
   let h=`<button class="cat-tab ${S.currentCat==='__all__'?'active':''}" onclick="selectCat('__all__')">All${allU?` <span class="badge">${allU}</span>`:''}</button>`;
-  // Build merged YouTube tab if any yt/shorts cats exist
-  const ytCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  // Build merged YouTube tab if any yt/shorts cats (or lone YouTube feeds) exist
+  const { ytCats, loneFeeds: ytLoneFeeds } = collectYoutubeSources();
   const nonYtCats=S.cats.filter(c=>!isYoutubeFamily(c.label));
-  if(ytCats.length){
-    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0);
+  if(ytCats.length || ytLoneFeeds.length){
+    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0)
+      + ytLoneFeeds.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
     const ytActive=ytCats.some(c=>c.id===S.currentCat)||S.currentCat==='__youtube_merged__';
     h+=`<button class="cat-tab ${ytActive?'active':''}" onclick="selectYoutubeMerged()">▶ YouTube${ytU?` <span class="badge">${ytU}</span>`:''}</button>`;
   }
@@ -1402,10 +1482,11 @@ async function loadUnifiedYoutubeMode(appendMode=false){
   const catBar=document.getElementById('yt-cat-bar');
   let h=`<button class="cat-tab" onclick="selectCat('__all__')" style="color:#aaa;border-color:transparent">All</button>`;
   // Show single merged YouTube tab + non-yt cats
-  const ytCats=S.cats.filter(c=>isYoutubeFamily(c.label));
+  const { ytCats, loneFeeds: ytLone } = collectYoutubeSources();
   const nonYtCats=S.cats.filter(c=>!isYoutubeFamily(c.label));
-  if(ytCats.length){
-    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0);
+  if(ytCats.length || ytLone.length){
+    const ytU=ytCats.reduce((s,c)=>s+c.feeds.reduce((s2,f)=>s2+(S.unreadMap[f.id]||0),0),0)
+      + ytLone.reduce((s,f)=>s+(S.unreadMap[f.id]||0),0);
     h+=`<button class="cat-tab active" onclick="selectYoutubeMerged()" style="background:var(--accent-bg);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,transparent)">▶ YouTube${ytU?` <span class="badge">${ytU}</span>`:''}</button>`;
   }
   nonYtCats.forEach(c=>{
@@ -1420,25 +1501,35 @@ async function loadUnifiedYoutubeMode(appendMode=false){
     grid.innerHTML=ytSkelHtml(6);
     S.ytContinuation=null;
   }
-  // Collect stream IDs from all yt+shorts categories
-  const allYtCats=S.cats.filter(c=>isYoutubeFamily(c.label));
-  if(!allYtCats.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No YouTube categories found</p></div>'; return; }
+  // Collect stream IDs from all yt+shorts categories AND lone YouTube feeds
+  const { ytCats: allYtCats, loneFeeds } = collectYoutubeSources();
+  if(!allYtCats.length && !loneFeeds.length){ grid.innerHTML='<div class="empty" style="color:#aaa"><p>No YouTube categories found</p></div>'; return; }
   try{
-    // Fetch from each category and merge
+    // Fetch from each category AND each lone feed, then merge
     let allItems=[];
     let continuation=null;
-    // For simplicity, fetch from all youtube cats combined into the first one's stream
-    // Use multiple fetches if multiple cats
-    const fetchPromises=allYtCats.map(async c=>{
-      const params={n:50};
-      if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
-      else if(S.ytFilter==='starred') return {items:[],continuation:null};
-      params.s=c.id;
-      if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
-      const data=await apiGet('/reader/api/0/stream/contents',params,signal);
-      if(data.continuation) continuation=data.continuation;
-      return data;
-    });
+    const fetchPromises=[
+      ...allYtCats.map(async c=>{
+        const params={n:50};
+        if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
+        else if(S.ytFilter==='starred') return {items:[],continuation:null};
+        params.s=c.id;
+        if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
+        const data=await apiGet('/reader/api/0/stream/contents',params,signal);
+        if(data.continuation) continuation=data.continuation;
+        return data;
+      }),
+      ...loneFeeds.map(async f=>{
+        const params={n:50};
+        if(S.ytFilter==='unread') params.xt='user/-/state/com.google/read';
+        else if(S.ytFilter==='starred') return {items:[],continuation:null};
+        params.s=f.id;
+        if(appendMode && S.ytContinuation) params.c=S.ytContinuation;
+        const data=await apiGet('/reader/api/0/stream/contents',params,signal);
+        if(data.continuation) continuation=data.continuation;
+        return data;
+      }),
+    ];
     let fetched;
     if(S.ytFilter==='starred'){
       const data=await apiGet('/reader/api/0/stream/contents',{n:50,s:'user/-/state/com.google/starred',...(appendMode&&S.ytContinuation?{c:S.ytContinuation}:{})},signal);
@@ -1506,14 +1597,15 @@ function renderYtGrid(){
   // Build O(1) index map once per render
   const idxMap=new Map(S.ytArticles.map((a,i)=>[a,i]));
 
-  // First apply sub-filter (videos / shorts / hidden channels)
+  // Hide = shorts-only. Hidden channels vanish from Shorts, but their
+  // long-form videos still show in Videos.
   const subF=S.ytSubFilter||'videos';
   if(subF==='hiddench'){
-    arts=arts.filter(a=>isChannelHidden(a));
+    arts=arts.filter(a=>isChannelHidden(a)&&isArticleShort(a));
   } else if(subF==='shorts'){
     arts=arts.filter(a=>isArticleShort(a)&&!isChannelHidden(a));
   } else {
-    arts=arts.filter(a=>!isArticleShort(a)&&!isChannelHidden(a));
+    arts=arts.filter(a=>!isArticleShort(a));
   }
 
   // Then apply read-state filter
@@ -1523,7 +1615,7 @@ function renderYtGrid(){
   }
 
   if(!arts.length){
-    const msg=subF==='hiddench'?'No hidden channels — use "Hide channel" on any video card':subF==='shorts'?'No Shorts':'No Videos';
+    const msg=subF==='hiddench'?'No hidden Shorts — use "Hide in Shorts" on any card':subF==='shorts'?'No Shorts':'No Videos';
     grid.innerHTML=`<div class="empty" style="color:#aaa"><p>${msg}</p></div>`; return;
   }
 
@@ -1555,8 +1647,12 @@ function renderYtGrid(){
           ${!hidden
             ?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${escJs(ch)}')">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="7 7 7 17 17 17"/></svg>
-                Hide channel</button>`
-            :`<button class="yt-hide-btn" style="color:#f59e0b;border-color:#f59e0b" onclick="event.stopPropagation();unhideChannel('${escJs(channelKey(ch))}')">↩ Restore channel</button>`
+                Hide in Shorts</button>`
+            :`<button class="yt-hide-btn" style="color:#f59e0b;border-color:#f59e0b" onclick="event.stopPropagation();unhideChannel('${escJs(channelKey(ch))}')">↩ Unhide in Shorts</button>`
+          }
+          ${isShort
+            ?`<button class="yt-hide-btn" onclick="event.stopPropagation();setShortOverride('${escJs(a.id)}',false)">↩ Not a Short</button>`
+            :`<button class="yt-hide-btn" onclick="event.stopPropagation();setShortOverride('${escJs(a.id)}',true)">⚡ Is a Short</button>`
           }
         </div>
       </div>
@@ -1640,20 +1736,55 @@ function launchYt(id, posterId){
 // SHORTS PLAYER (launched from the Shorts sub-filter in YouTube mode)
 // Draws from S.ytArticles filtered to shorts; full-screen swipe player
 // ═══════════════════════════════════════════════════════════
-function openShortsFromYt(){
-  // Populate shortsArticles from the merged ytArticles, shorts only, respecting hidden
-  let arts=S.ytArticles.filter(a=>isArticleShort(a)&&!isChannelHidden(a));
+function openShortsFromYt(keepPlayer){
+  // Single-feed aware: split the ONE merged YouTube list into shorts vs videos
+  // in-app. Newest first so the player opens on the newest short.
+  const sorted = [...S.ytArticles].sort((a,b)=>(b.published||0)-(a.published||0));
+  let arts = sorted.filter(a=>isArticleShort(a)&&!isChannelHidden(a));
   if(S.ytFilter==='unread') arts=arts.filter(a=>!S.readSet.has(a.id));
   else if(S.ytFilter==='starred') arts=arts.filter(a=>S.starSet.has(a.id));
   S.shortsArticles=arts;
   stopAllMedia();
   showScreen('shorts-screen');
-  document.getElementById('shorts-title').textContent='Shorts';
+  document.getElementById('shorts-title').textContent='Shorts · my feed';
   renderShortsCatBar();
-  // Intentional-use default: show the gallery first so you pick what to watch.
-  // Tap any thumbnail to enter the fullscreen player.
-  closeShortsPlayer();
-  renderShortsGallery();
+  if(!arts.length){
+    // Diagnostics: tell the user WHY.
+    closeShortsPlayer();
+    const total = S.ytArticles.length;
+    const sample = S.ytArticles.slice(0,3).map(a=>esc(a.canonical?.[0]?.href||a.alternate?.[0]?.href||a.id||'')).join('<br>');
+    document.getElementById('shorts-gallery').innerHTML =
+      `<div style="padding:32px 20px;text-align:center;color:#aaa;grid-column:1/-1">
+        <p style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:8px">No shorts detected</p>
+        <p style="font-size:.82rem;line-height:1.6">Fetched ${total} YouTube items, none matched as Shorts.</p>
+        <p style="font-size:.82rem;line-height:1.6;margin-top:10px">If your links look like <code>/shorts/…</code> this is a detection bug — tap Diagnose below.<br>
+        Otherwise use “Mark as Short” on Videos-tab cards (sticks on this device).</p>
+        <button onclick="diagnoseShorts()" style="margin-top:14px;padding:9px 20px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:20px;font-size:.82rem;font-weight:700">🔍 Diagnose</button>
+        <div id="shorts-diag" style="margin-top:12px;text-align:left"></div>
+        ${sample?`<p style="font-size:.7rem;color:#666;margin-top:12px;word-break:break-all">${sample}</p>`:''}
+      </div>`;
+    if(!keepPlayer) toast('No shorts detected — see note on screen');
+    return;
+  }
+  // Doomscroll mode: straight into the fullscreen vertical player, newest short playing.
+  openShortsPlayer(0);
+}
+// Shows per-slot /shorts/ breakdown for the first 10 fetched items so a
+// detection miss can be pinned to canonical vs alternate vs content.
+function diagnoseShorts(){
+  const el = document.getElementById('shorts-diag');
+  if(!el) return;
+  const rows = S.ytArticles.slice(0, 10).map(a => {
+    const w = shortDetectWhy(a);
+    const flag = isArticleShort(a) ? '✅ short' : '❌ video';
+    return `<div style="padding:8px 10px;border:1px solid #333;border-radius:8px;margin-bottom:6px;font-size:.72rem;line-height:1.5;color:#ccc">
+      <div style="color:#fff;font-weight:700">${esc((a.title||'Untitled').slice(0,80))} — ${flag}</div>
+      <div>canonical:/shorts/=${w.inCanonical?'Y':'n'} · alternate:/shorts/=${w.inAlternate?'Y':'n'} · content:/shorts/=${w.inContent?'Y':'n'} · #shorts=${w.hashtag?'Y':'n'}</div>
+      <div style="color:#777;word-break:break-all">${esc(w.firstUrl||'')}</div>
+    </div>`;
+  }).join('') || '<p style="color:#777">Nothing fetched yet.</p>';
+  el.innerHTML = rows;
+  console.log('[shorts-diag]', S.ytArticles.slice(0,10).map(a=>({title:a.title, why:shortDetectWhy(a)})));
 }
 async function loadShortsMode(){
   // Kept for backward compat — just redirect to openShortsFromYt if we have data
@@ -1767,17 +1898,23 @@ function renderShortsSlides(startIdx){
     const title=a.title||'';
     const author=a.author||a.origin?.title||'';
     const starred=S.starSet.has(a.id);
-    return `<div class="short-slide" id="ss-${i}" data-idx="${i}">
+    const url=a.canonical?.[0]?.href||a.alternate?.[0]?.href||'';
+    return `<div class="short-slide" id="ss-${i}" data-idx="${i}" onclick="toggleSlideYtMute(${i})">
       ${buildSlideMedia(a,raw,i)}
       <div class="short-overlay">
         <div class="short-title">${esc(title)}</div>
         <div class="short-author">${esc(author)}</div>
+        <div class="mute-badge" style="display:inline-block;margin-top:6px;font-size:.7rem;font-weight:700;background:rgba(0,0,0,.6);padding:3px 9px;border-radius:20px;color:#fff;pointer-events:none">🔇 tap for sound</div>
       </div>
-      <div class="short-actions">
+      <div class="short-actions" onclick="event.stopPropagation()">
         <div class="short-action" onclick="toggleShortStar(${i})">
           <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'white'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span>${starred?'Saved':'Save'}</span>
         </div>
+        ${url?`<div class="short-action" onclick="window.open('${escJs(url)}','_blank','noopener')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span>Open</span>
+        </div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -1802,7 +1939,7 @@ function buildSlideMedia(a, raw, idx){
   const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
   if(ytId){
     const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-    return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}');event.stopPropagation()">
+    return `<div style="position:absolute;inset:0;cursor:pointer" id="sp-poster-${idx}" onclick="loadSlideYt(${idx},'${ytId}',{userGesture:true});event.stopPropagation()">
       <img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
         <div style="width:56px;height:40px;background:rgba(255,0,0,.9);border-radius:8px;display:flex;align-items:center;justify-content:center">
@@ -1822,12 +1959,19 @@ function attachSlideVideos(){
     const video=document.createElement('video');
     video.src=src;
     if(poster) video.poster=poster;
+    // Doomscroll feel: muted autoplay loop, no controls; tap toggles sound.
+    video.muted=true;
+    video.loop=true;
+    video.autoplay=true;
     video.playsInline=true;
     video.setAttribute('playsinline','');
     video.setAttribute('webkit-playsinline','');
-    video.controls=true;
-    video.preload='metadata';
-    video.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#000;';
+    video.setAttribute('muted','');
+    video.removeAttribute('controls');
+    video.preload='auto';
+    video.style.cssText='width:100%;height:100%;object-fit:cover;position:absolute;inset:0;background:#000;';
+    video.onclick=(e)=>{ e.stopPropagation(); video.muted=!video.muted; if(video.muted) video.setAttribute('muted',''); else video.removeAttribute('muted'); video.play().catch(()=>{}); syncMuteBadge(video); };
+    video.onvolumechange=()=>syncMuteBadge(video);
     video.onerror=function(){
       try{
         const slide=this.closest?this.closest('.short-slide'):null;
@@ -1848,23 +1992,73 @@ function attachSlideVideos(){
   });
 }
 
-function loadSlideYt(idx, id){
+function ytEmbedSrc(id, {autoplay=false, muted=false}={}){
+  const p = new URLSearchParams({rel:'0', playsinline:'1', enablejsapi:'1', modestbranding:'1'});
+  if(autoplay) p.set('autoplay','1');
+  if(muted) p.set('mute','1');
+  return `https://www.youtube-nocookie.com/embed/${id}?${p.toString()}`;
+}
+function loadSlideYt(idx, id, {autoplay=false, muted=false, userGesture=false}={}){
   const slide=document.getElementById('ss-'+idx); if(!slide) return;
   if(slide.querySelector('iframe')) return;
   const poster=document.getElementById(`sp-poster-${idx}`); if(!poster) return;
   const iframe=document.createElement('iframe');
-  iframe.src=`https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`;
+  iframe.src=ytEmbedSrc(id,{autoplay:autoplay||userGesture, muted:userGesture?false:muted});
+  iframe.dataset.ytid=id;
+  iframe.dataset.muted=(userGesture?false:muted)?'1':'0';
   iframe.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
   iframe.setAttribute('allowfullscreen','');
   iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;z-index:2;';
   poster.parentNode.insertBefore(iframe,poster);
   poster.remove();
+  syncYtMuteBadge(idx);
+}
+// Tap toggles sound: muted autoplay → reload unmuted (allowed as user gesture);
+// unmuted → mute via player API without reload.
+function toggleSlideYtMute(idx){
+  const slide=document.getElementById('ss-'+idx); if(!slide) return;
+  const iframe=slide.querySelector('iframe');
+  if(!iframe) return;
+  const id=iframe.dataset.ytid;
+  if(iframe.dataset.muted==='1'){
+    const fresh=document.createElement('iframe');
+    fresh.src=ytEmbedSrc(id,{autoplay:true, muted:false});
+    fresh.dataset.ytid=id; fresh.dataset.muted='0';
+    fresh.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
+    fresh.setAttribute('allowfullscreen','');
+    fresh.style.cssText=iframe.style.cssText;
+    iframe.replaceWith(fresh);
+  } else {
+    try{ iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}','*'); }catch(e){}
+    iframe.dataset.muted='1';
+  }
+  syncYtMuteBadge(idx);
+}
+function syncYtMuteBadge(idx){
+  const slide=document.getElementById('ss-'+idx); if(!slide) return;
+  const iframe=slide.querySelector('iframe');
+  const badge=slide.querySelector('.mute-badge');
+  if(!badge) return;
+  const muted = iframe ? iframe.dataset.muted!=='0' : true;
+  badge.textContent = muted ? '🔇 tap for sound' : '🔊';
+}
+function syncMuteBadge(video){
+  const slide=video.closest?video.closest('.short-slide'):null;
+  const badge=slide?.querySelector('.mute-badge');
+  if(badge) badge.textContent = video.muted ? '🔇 tap for sound' : '🔊';
 }
 function playSlideAt(idx){
   const slide=document.getElementById('ss-'+idx); if(!slide) return;
   if(slide.querySelector('iframe')) return;
   const video=slide.querySelector('video');
-  if(video&&video.paused) video.play().catch(()=>{});
+  if(video){ video.muted=true; video.play().catch(()=>{}); syncMuteBadge(video); return; }
+  // YouTube short: autoplay muted as it scrolls into view (doomscroll feel).
+  const a=S.shortsArticles[idx];
+  if(a){
+    const raw=a.summary?.content||a.content?.content||'';
+    const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
+    if(ytId) loadSlideYt(idx, ytId, {autoplay:true, muted:true});
+  }
 }
 function pauseSlideAt(idx){
   const slide=document.getElementById('ss-'+idx); if(!slide) return;
@@ -1878,12 +2072,12 @@ function pauseSlideAt(idx){
   if(a){
     const raw=a.summary?.content||a.content?.content||'';
     const ytId=extractYtId(a.canonical?.[0]?.href||'')||extractYtId(raw);
-    if(ytId&&!slide.querySelector('video')&&!slide.querySelector('iframe')){
+    if(ytId&&!slide.querySelector('video')&&!slide.querySelector('iframe')&&!slide.querySelector('[id^="sp-poster-"]')){
       const thumb=`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
       const div=document.createElement('div');
       div.id=`sp-poster-${idx}`;
       div.style.cssText='position:absolute;inset:0;cursor:pointer';
-      div.onclick=()=>loadSlideYt(idx,ytId);
+      div.onclick=()=>loadSlideYt(idx,ytId,{userGesture:true});
       div.innerHTML=`<img src="${esc(thumb)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
           <div style="width:56px;height:40px;background:rgba(255,0,0,.9);border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="8,5 19,12 8,19"/></svg></div>
@@ -2076,7 +2270,7 @@ function toggleCatFilter(catId, include){
 
 function renderHiddenChannelsList(){
   const container=document.getElementById('hidden-ch-list');
-  if(!S.hiddenChannels.size){ container.innerHTML='<div style="font-size:.82rem;color:var(--text3)">No channels hidden yet. Use the "Hide channel" button on any YouTube/Shorts card.</div>'; return; }
+  if(!S.hiddenChannels.size){ container.innerHTML='<div style="font-size:.82rem;color:var(--text3)">No channels hidden yet. Use the "Hide in Shorts" button on any YouTube card.</div>'; return; }
   container.innerHTML=[...S.hiddenChannels].map(key=>`
     <div class="hidden-ch-item">
       <span>${esc(key)}</span>
