@@ -1,24 +1,23 @@
-// v8 — Cloudflare Pages + iOS-safe PWA SW
-const CACHE = 'freshrss-pwa-v8';
+// v9 — Cloudflare Pages + iOS-safe PWA SW, subdir-safe, resilient precache
+const CACHE = 'freshrss-pwa-v9';
 
-// Canonical app shell URL for Pages
-const SHELL_URL = new URL('/', self.location.origin).toString();
+// Works when hosted at root OR in a subdirectory (e.g. /reader/)
+const SHELL_URL = new URL('./', self.location).toString();
 
 const STATIC_ASSETS = [
-  '/manifest.json',
-  '/favicon.ico',
-  '/icons/icon-72.png',
-  '/icons/icon-96.png',
-  '/icons/icon-120.png',
-  '/icons/icon-128.png',
-  '/icons/icon-144.png',
-  '/icons/icon-152.png',
-  '/icons/icon-167.png',
-  '/icons/icon-180.png',
-  '/icons/icon-192.png',
-  '/icons/icon-256.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable-512.png',
+  'manifest.json',
+  'favicon.ico',
+  'icons/icon-32.png',
+  'icons/icon-72.png',
+  'icons/icon-96.png',
+  'icons/icon-128.png',
+  'icons/icon-144.png',
+  'icons/icon-152.png',
+  'icons/icon-180.png',
+  'icons/icon-192.png',
+  'icons/icon-256.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('install', event => {
@@ -38,8 +37,16 @@ self.addEventListener('install', event => {
       }
     } catch (_) {}
 
-    // Precache static assets
-    await cache.addAll(STATIC_ASSETS);
+    // Precache static assets — each individually so one 404 never fails install
+    await Promise.all(STATIC_ASSETS.map(async (a) => {
+      try {
+        const u = new URL(a, self.location).toString();
+        const res = await fetch(u, { cache: 'no-store' });
+        if (res.ok && res.status === 200 && !res.redirected) {
+          await cache.put(u, res.clone());
+        }
+      } catch (_) {}
+    }));
 
     await self.skipWaiting();
   })());

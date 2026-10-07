@@ -316,7 +316,7 @@
       padding-bottom:calc(16px + var(--safe-bottom));
       display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
     }
-    @media(max-width:500px){.shorts-gallery{grid-template-columns:1fr;gap:1px}}
+    @media(min-width:900px){.shorts-gallery{grid-template-columns:repeat(4,1fr);}}
     .shorts-gallery-card{position:relative;cursor:pointer;overflow:hidden;aspect-ratio:9/16;background:#000}
     .shorts-gallery-card img{width:100%;height:100%;object-fit:cover;display:block}
     .shorts-gallery-card .play-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;font-weight:700;padding:2px 4px;border-radius:3px}
@@ -330,7 +330,7 @@
       background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);z-index:10;
     }
     .shorts-player-topbar .topbar-title{color:#fff;font-size:1rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .shorts-slides{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-ms-overflow-style:none}
+    .shorts-slides{flex:1;overflow-y:auto;overscroll-behavior-y:contain;touch-action:pan-y;scroll-snap-type:y mandatory;scrollbar-width:none;-ms-overflow-style:none}
     .shorts-slides::-webkit-scrollbar{display:none}
     .short-slide{height:100dvh;scroll-snap-align:start;position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
     .short-slide video{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
@@ -375,10 +375,7 @@
     .hidden-ch-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg2);border-radius:var(--radius-sm);font-size:.83rem}
     .hidden-ch-item button{font-size:.72rem;color:var(--accent);font-weight:700;padding:3px 8px;border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:4px}
 
-    /* landscape block */
-    @media(orientation:landscape) and (max-height:500px){
-      body::before{content:'Rotate to portrait';position:fixed;inset:0;z-index:9999;background:var(--bg);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:1rem}
-    }
+    /* landscape: allowed — video and tablets need it. Layout is fluid. */
   </style>
 </head>
 <body>
@@ -422,6 +419,11 @@
       <button class="filter-btn" id="f-starred" onclick="setFilter('starred')">Starred</button>
     </div>
     <button class="mark-all-btn" onclick="markAllRead()">Mark all read</button>
+  </div>
+  <div style="padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface)">
+    <input id="article-search" type="search" placeholder="Filter: type to find what you actually want…" autocomplete="off"
+      oninput="setQuery(this.value)"
+      style="width:100%;padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.85rem;outline:none"/>
   </div>
   <div class="article-list"><div id="list-content"></div><div id="load-more-wrap" style="padding:16px;text-align:center;display:none"><button id="load-more-btn" onclick="loadMoreArticles()" style="padding:10px 28px;background:var(--accent-bg);color:var(--accent);border:1.5px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:100px;font-size:.85rem;font-weight:700;cursor:pointer">Load more</button></div></div>
 </div>
@@ -615,7 +617,7 @@ const S = {
   articles:[],
   cachedArticles:{},
   currentCat:'__all__', currentFeed:null,
-  filter:'unread',
+  filter:'unread', query:'',
   readSet:new Set(), starSet:new Set(), syncedReadSet:new Set(),
   curIdx:-1, curArticle:null,
   // Unified YouTube state — ytSubFilter: 'videos'|'shorts'|'hiddench'
@@ -759,6 +761,21 @@ function persistSyncedReadSet(){
   }catch(e){
     console.warn('Failed to persist synced read set:', e);
   }
+}
+// Central helper: mark one article read locally + persist (debounced via persistReadSet
+// callers that mark many at once should call persistReadSet themselves once at the end)
+let _readPersistT = null;
+function markReadLocal(id){
+  if(!id || S.readSet.has(id)) return false;
+  S.readSet.add(id);
+  S.syncedReadSet.add(id);
+  // decrement cached unread counts so badges stay truthful without refetch
+  const art = S.cachedArticles[id] || S.articles.find(a=>a.id===id) || S.ytArticles.find(a=>a.id===id);
+  const fid = art?.origin?.streamId;
+  if(fid && S.unreadMap[fid] > 0) S.unreadMap[fid]--;
+  clearTimeout(_readPersistT);
+  _readPersistT = setTimeout(()=>{ persistReadSet(); persistSyncedReadSet(); }, 500);
+  return true;
 }
 function pruneByDate(){
   if(!S.cacheDays) return;
@@ -940,7 +957,8 @@ async function loadApp(){
   }
   try{
     await Promise.all([loadCategories(), loadUnreadCounts()]);
-    await loadArticles();
+    if(S.currentCat==='__youtube_merged__') await loadUnifiedYoutubeMode();
+    else await loadArticles();
     showOfflineBanner(false);
   }catch(e){
     console.warn('loadApp network error, falling back to cache:', e);
@@ -1051,6 +1069,7 @@ function selectYoutubeMerged(){
   stopAllMedia();
   S.currentCat='__youtube_merged__';
   S.currentFeed=null;
+  persistUIState();
   renderCatTabs();
   loadUnifiedYoutubeMode();
 }
@@ -1068,6 +1087,7 @@ function stopAllMedia(){
 function selectCat(id){
   stopAllMedia();
   S.currentCat=id; S.currentFeed=null;
+  persistUIState();
   renderCatTabs(); renderFeedBar();
   // If this cat is yt/shorts family, use unified mode
   const label=currentCatLabel();
@@ -1098,9 +1118,10 @@ function renderFeedBar(){
   bar.innerHTML=h;
 }
 function selectFeedByIdx(i){ const f=_feedBarFeeds&&_feedBarFeeds[i]; if(f) selectFeed(f.id); }
-function selectFeed(id){ S.currentFeed=id; renderFeedBar(); loadArticles(); }
+function selectFeed(id){ S.currentFeed=id; persistUIState(); renderFeedBar(); loadArticles(); }
 function setFilter(f){
   S.filter=f;
+  persistUIState();
   ['all','unread','starred'].forEach(x=>document.getElementById('f-'+x).classList.toggle('active',x===f));
   renderArticleList();
 }
@@ -1165,9 +1186,18 @@ async function loadArticles(appendMode=false){
 async function loadMoreArticles(){ await loadArticles(true); }
 
 function visibleArticles(){
-  if(S.filter==='unread') return S.articles.filter(a=>!S.readSet.has(a.id));
-  if(S.filter==='starred') return S.articles.filter(a=>S.starSet.has(a.id));
-  return S.articles;
+  let arts;
+  if(S.filter==='unread') arts=S.articles.filter(a=>!S.readSet.has(a.id));
+  else if(S.filter==='starred') arts=S.articles.filter(a=>S.starSet.has(a.id));
+  else arts=S.articles;
+  const q=(S.query||'').trim().toLowerCase();
+  if(q) arts=arts.filter(a=>((a.title||'')+' '+(a.origin?.title||'')+' '+(a.author||'')).toLowerCase().includes(q));
+  return arts;
+}
+let _queryT=null;
+function setQuery(v){
+  clearTimeout(_queryT);
+  _queryT=setTimeout(()=>{ S.query=v||''; renderArticleList(); }, 150);
 }
 
 function renderArticleList(){
@@ -1205,8 +1235,7 @@ async function openArticle(idx, dir){
   if(dir){ await animateSwipe(dir,()=>renderReader(a)); }
   else{ renderReader(a); showScreen('reader-screen'); }
   updateReaderNav(idx,arts.length);
-  if(!S.readSet.has(a.id)){
-    S.readSet.add(a.id);
+  if(markReadLocal(a.id)){
     apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
   }
   updateStarBtn();
@@ -1268,7 +1297,7 @@ function toggleStar(){
 }
 async function markReadCurrent(){
   const a=S.curArticle; if(!a) return;
-  S.readSet.add(a.id);
+  markReadLocal(a.id);
   await apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
   toast('Marked read');
 }
@@ -1286,9 +1315,10 @@ async function markAllRead(){
     if(S.currentCat==='__all__'||S.currentCat==='__youtube_merged__') sid='user/-/state/com.google/reading-list';
     else sid=S.currentFeed||S.currentCat;
     await apiPost('/reader/api/0/mark-all-as-read',{s:sid,ts});
-    S.articles.forEach(a=>S.readSet.add(a.id));
-    S.ytArticles.forEach(a=>S.readSet.add(a.id));
-    renderArticleList(); toast('All marked read');
+    S.articles.forEach(a=>{ S.readSet.add(a.id); S.syncedReadSet.add(a.id); });
+    S.ytArticles.forEach(a=>{ S.readSet.add(a.id); S.syncedReadSet.add(a.id); });
+    persistReadSet(); persistSyncedReadSet();
+    renderArticleList(); renderYtGrid(); renderCatTabs(); toast('All marked read');
   }catch(e){ toast('Failed: '+e.message); }
 }
 
@@ -1441,6 +1471,7 @@ async function loadMoreYt(){ await loadUnifiedYoutubeMode(true); }
 
 function setYtSubFilter(f){
   S.ytSubFilter=f;
+  persistUIState();
   ['videos','shorts','hiddench'].forEach(x=>{
     const btn=document.getElementById('ysf-'+x);
     if(!btn) return;
@@ -1460,6 +1491,7 @@ function setYtSubFilterShorts(){
 
 function setYtFilter(f){
   S.ytFilter=f;
+  persistUIState();
   ['all','unread','starred'].forEach(x=>{
     const btn=document.getElementById('yf-'+x);
     if(btn){ btn.classList.toggle('active',x===f); btn.style.color=x===f?'var(--accent)':'#aaa'; btn.style.borderColor=x===f?'color-mix(in srgb,var(--accent) 30%,transparent)':'#444'; }
@@ -1521,10 +1553,10 @@ function renderYtGrid(){
           <div class="yt-card-title">${esc(a.title||'Untitled')}</div>
           <div class="yt-card-sub">${esc(ch)} · ${esc(date)}</div>
           ${!hidden
-            ?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${esc(ch)}')">
+            ?`<button class="yt-hide-btn" onclick="event.stopPropagation();hideChannel('${escJs(ch)}')">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="7 7 7 17 17 17"/></svg>
                 Hide channel</button>`
-            :`<button class="yt-hide-btn" style="color:#f59e0b;border-color:#f59e0b" onclick="event.stopPropagation();unhideChannel('${esc(channelKey(ch))}')">↩ Restore channel</button>`
+            :`<button class="yt-hide-btn" style="color:#f59e0b;border-color:#f59e0b" onclick="event.stopPropagation();unhideChannel('${escJs(channelKey(ch))}')">↩ Restore channel</button>`
           }
         </div>
       </div>
@@ -1547,7 +1579,7 @@ function ytSearch(){
 function openYtArticle(idx){
   const a=S.ytArticles[idx]; if(!a) return;
   S.ytCurIdx=idx; S.ytCurArticle=a;
-  if(!S.readSet.has(a.id)){ S.readSet.add(a.id); apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
+  if(markReadLocal(a.id)){ apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{}); }
   renderYtReader(a);
   showScreen('yt-reader');
 }
@@ -1579,7 +1611,7 @@ function renderYtReader(a){
           <svg viewBox="0 0 24 24" fill="${starred?'#f59e0b':'none'}" stroke="${starred?'#f59e0b':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           <span>Save</span>
         </button>
-        ${url?`<button class="yt-action-btn" onclick="window.open('${esc(url)}','_blank','noopener')">
+        ${url?`<button class="yt-action-btn" onclick="window.open('${escJs(url)}','_blank','noopener')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           <span>Open</span>
         </button>`:''}
@@ -1618,12 +1650,10 @@ function openShortsFromYt(){
   showScreen('shorts-screen');
   document.getElementById('shorts-title').textContent='Shorts';
   renderShortsCatBar();
-  // Always go directly to player for true shorts experience (like YouTube)
-  if(S.shortsArticles.length > 0){
-    openShortsPlayer(0);
-  } else {
-    renderShortsGallery();
-  }
+  // Intentional-use default: show the gallery first so you pick what to watch.
+  // Tap any thumbnail to enter the fullscreen player.
+  closeShortsPlayer();
+  renderShortsGallery();
 }
 async function loadShortsMode(){
   // Kept for backward compat — just redirect to openShortsFromYt if we have data
@@ -1665,6 +1695,7 @@ function selectShortsFeed(id){ S.currentFeed=id; openShortsFromYt(); }
 function selectShortsFeedByIdx(i){ const f=_feedBarFeeds&&_feedBarFeeds[i]; if(f) selectShortsFeed(f.id); }
 function setShortsFilter(f){
   S.shortsFilter=f;
+  persistUIState();
   ['all','unread','starred','hidden'].forEach(x=>{
     const btn=document.getElementById('sf-'+x);
     if(btn) btn.classList.toggle('active',x===f);
@@ -1717,7 +1748,7 @@ function openShortsPlayer(startIdx){
   requestAnimationFrame(()=>{
     const slides=document.getElementById('shorts-slides');
     const el=slides.children[startIdx];
-    if(el) el.scrollIntoView({behavior:'instant'});
+    if(el) el.scrollIntoView({behavior:'auto', block:'start'});
     playSlideAt(startIdx);
   });
   observeShortsSlides();
@@ -1876,7 +1907,7 @@ function observeShortsSlides(){
         if(!_shortsPlaying.has(idx)){ _shortsPlaying.add(idx); playSlideAt(idx); }
         const a=S.shortsArticles[idx];
         if(a&&!S.readSet.has(a.id)){
-          S.readSet.add(a.id);
+          markReadLocal(a.id);
           apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
         }
       } else {
@@ -1888,28 +1919,9 @@ function observeShortsSlides(){
   slidesEl.querySelectorAll('.short-slide').forEach(el=>_shortsObs.observe(el));
 }
 
-// Touch handling for immediate swipe response in shorts player
-let shortsSx=0, shortsSy=0, shortsSt=0;
-const SHORTS_T=50, SHORTS_MY=100, SHORTS_MT=300;
-document.getElementById('shorts-slides').addEventListener('touchstart',e=>{
-  if(!document.getElementById('shorts-player').classList.contains('open')) return;
-  shortsSx=e.touches[0].clientX; shortsSy=e.touches[0].clientY; shortsSt=Date.now();
-},{passive:true});
-document.getElementById('shorts-slides').addEventListener('touchend',e=>{
-  if(!document.getElementById('shorts-player').classList.contains('open')) return;
-  const dx=e.changedTouches[0].clientX-shortsSx;
-  const dy=Math.abs(e.changedTouches[0].clientY-shortsSy);
-  const dt=Date.now()-shortsSt;
-  if(Math.abs(dx)<SHORTS_T||dy>SHORTS_MY||dt>SHORTS_MT) return;
-  // Only respond to vertical swipes for shorts navigation
-  if(Math.abs(dx)>Math.abs(dy)*2) return; // Prefer vertical swipes
-  if(dy<0) navigateShortsPlayer(1); else navigateShortsPlayer(-1);
-},{passive:true});
-document.getElementById('shorts-slides').addEventListener('wheel',e=>{
-  e.preventDefault();
-  const el=document.getElementById('shorts-slides');
-  el.scrollBy({top:e.deltaY>0?window.innerHeight:-window.innerHeight,behavior:'smooth'});
-},{passive:false});
+// Native scroll-snap + IntersectionObserver already handle swipe/scroll navigation.
+// No custom touch/wheel hijack — it fought the native scroller and mis-detected
+// vertical swipes (dy was Math.abs'd, so direction was always -1).
 
 function navigateShortsPlayer(delta){
   const total=S.shortsArticles.length;
@@ -1936,10 +1948,8 @@ function navigateShortsPlayer(delta){
   // Mark as read if not already
   const a=S.shortsArticles[newIdx];
   if(a&&!S.readSet.has(a.id)){
-    S.readSet.add(a.id);
+    markReadLocal(a.id);
     apiPost('/reader/api/0/edit-tag',{i:a.id,a:'user/-/state/com.google/read'}).catch(()=>{});
-    persistReadSet();
-    persistSyncedReadSet(); // Save for cross-session sync
   }
 }
 
@@ -2053,7 +2063,7 @@ function renderCatFilterList(){
   container.innerHTML=S.cats.map(c=>{
     const checked=!S.excludedCatIds.has(c.id);
     return `<label class="cat-checkbox-item">
-      <input type="checkbox" ${checked?'checked':''} onchange="toggleCatFilter('${esc(c.id)}',this.checked)"/>
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleCatFilter('${escJs(c.id)}',this.checked)"/>
       <span>${esc(c.label)}</span>
     </label>`;
   }).join('');
@@ -2070,7 +2080,7 @@ function renderHiddenChannelsList(){
   container.innerHTML=[...S.hiddenChannels].map(key=>`
     <div class="hidden-ch-item">
       <span>${esc(key)}</span>
-      <button onclick="unhideChannel('${esc(key)}')">Restore</button>
+      <button onclick="unhideChannel('${escJs(key)}')">Restore</button>
     </div>`).join('');
 }
 
@@ -2099,6 +2109,8 @@ async function clearAllAndReload(){
 // UTILS
 // ═══════════════════════════════════════════════════════════
 function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Escape for use inside single-quoted JS string in inline onclick=""
+function escJs(s){ return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'\\x3c').replace(/>/g,'\\x3e').replace(/\n/g,'\\n'); }
 function stripTags(html){ const t=document.createElement('div'); t.innerHTML=html; return t.textContent||t.innerText||''; }
 function firstImg(html){
   const t=document.createElement('div'); t.innerHTML=html;
@@ -2155,7 +2167,7 @@ window.addEventListener('online', async()=>{
   }catch(e){ showOfflineBanner(true); }
 });
 window.addEventListener('offline',()=>{ showOfflineBanner(true); });
-if(screen.orientation?.lock) screen.orientation.lock('portrait').catch(()=>{});
+// NOTE: no screen.orientation.lock — landscape is needed for video/tablets.
 
 // ── Pull-to-refresh ──────────────────────────────────────
 (function(){
